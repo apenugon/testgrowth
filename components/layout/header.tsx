@@ -13,7 +13,8 @@ import {
   Trophy, 
   ChevronLeft,
   Menu,
-  Settings
+  Settings,
+  ShoppingBag
 } from "lucide-react"
 import { useState } from "react"
 
@@ -88,12 +89,20 @@ export function Header({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   {experienceId && (
-                    <DropdownMenuItem asChild>
-                      <Link href={`/experiences/${experienceId}/dashboard`}>
-                        <Settings className="w-4 h-4 mr-2" />
-                        Switch to creator mode
-                      </Link>
-                    </DropdownMenuItem>
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link href={`/experiences/${experienceId}/shopify-connections`}>
+                          <ShoppingBag className="w-4 h-4 mr-2" />
+                          Shopify Connections
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href={`/experiences/${experienceId}/dashboard`}>
+                          <Settings className="w-4 h-4 mr-2" />
+                          Switch to creator mode
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>

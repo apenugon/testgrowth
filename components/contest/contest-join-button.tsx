@@ -5,8 +5,15 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Users, DollarSign, CheckCircle, Clock, Lock, ShoppingBag } from "lucide-react"
+import { Users, DollarSign, CheckCircle, Clock, Lock, ShoppingBag, ChevronDown } from "lucide-react"
 import { formatCurrency, formatDate } from "@/lib/utils"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 type Contest = {
   id: string
@@ -21,6 +28,12 @@ type Contest = {
   participants: Array<{ userId: string }>
 }
 
+type ShopifyStore = {
+  id: string
+  shopDomain: string
+  isActive: boolean
+}
+
 interface ContestJoinButtonProps {
   contest: Contest
   userId?: string | null
@@ -31,9 +44,9 @@ interface ContestJoinButtonProps {
 export function ContestJoinButton({ contest, userId, isParticipating, experienceId }: ContestJoinButtonProps) {
   const [isJoining, setIsJoining] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [hasShopifyStore, setHasShopifyStore] = useState<boolean | null>(null)
-  const [storeDetails, setStoreDetails] = useState<{id: string, shopDomain: string} | null>(null)
-  const [checkingStore, setCheckingStore] = useState(true)
+  const [stores, setStores] = useState<ShopifyStore[]>([])
+  const [selectedStoreId, setSelectedStoreId] = useState<string>("")
+  const [checkingStores, setCheckingStores] = useState(true)
   const [disconnecting, setDisconnecting] = useState(false)
   const router = useRouter()
 
@@ -42,100 +55,41 @@ export function ContestJoinButton({ contest, userId, isParticipating, experience
   const hasEnded = now >= new Date(contest.endAt)
   const isFull = contest.maxParticipants && contest.participants.length >= contest.maxParticipants
 
-  // Check if user has connected Shopify store
+  // Fetch user's Shopify stores
   useEffect(() => {
-    const checkShopifyConnection = async () => {
+    const fetchStores = async () => {
       if (!userId) {
-        setCheckingStore(false)
+        setCheckingStores(false)
         return
       }
 
       try {
-        const response = await fetch(`/api/stores/check/${userId}`)
+        const response = await fetch(`/api/stores/all/${userId}`)
         if (response.ok) {
           const data = await response.json()
-          setHasShopifyStore(data.hasStore)
-          if (data.hasStore && data.store) {
-            setStoreDetails(data.store)
+          const activeStores = data.stores.filter((store: any) => store.isActive)
+          setStores(activeStores)
+          
+          // Auto-select first store if there's only one
+          if (activeStores.length === 1) {
+            setSelectedStoreId(activeStores[0].id)
           }
         } else {
-          setHasShopifyStore(false)
+          setStores([])
         }
       } catch (error) {
-        console.error('Error checking Shopify connection:', error)
-        setHasShopifyStore(false)
+        console.error('Error fetching stores:', error)
+        setStores([])
       } finally {
-        setCheckingStore(false)
+        setCheckingStores(false)
       }
     }
 
-    checkShopifyConnection()
+    fetchStores()
   }, [userId])
 
-  const handleDisconnectStore = async () => {
-    if (!userId) return
-
-    setDisconnecting(true)
-    setError(null)
-
-    try {
-      const response = await fetch('/api/stores/disconnect', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId,
-          storeId: storeDetails?.id
-        }),
-      })
-
-      if (response.ok) {
-        setHasShopifyStore(false)
-        setStoreDetails(null)
-        // Optionally show success message
-      } else {
-        const errorData = await response.json()
-        setError(errorData.error || 'Failed to disconnect store')
-      }
-    } catch (err) {
-      setError('Failed to disconnect store')
-    } finally {
-      setDisconnecting(false)
-    }
-  }
-
-  const handleJoinClick = async () => {
-    if (!userId) {
-      setError("You must be logged in to join a contest")
-      return
-    }
-
-    // If user doesn't have a Shopify store, open popup for connection
-    if (hasShopifyStore === false) {
-      openShopifyConnectionPopup()
-      return
-    }
-
-    // Proceed with joining the contest
-    await handleJoin()
-  }
-
-  const openShopifyConnectionPopup = () => {
-    setIsJoining(true)
-    setError(null)
-
-    // Build OAuth initiation URL
-    const oauthUrl = new URL('/api/auth/shopify', window.location.origin)
-    oauthUrl.searchParams.set('shop', 'placeholder') // Will be prompted in popup
-    oauthUrl.searchParams.set('userId', userId!)
-    oauthUrl.searchParams.set('popup', 'true')
-    if (experienceId) {
-      oauthUrl.searchParams.set('experienceId', experienceId)
-      oauthUrl.searchParams.set('returnTo', `/experiences/${experienceId}/contest/${contest.slug}`)
-    }
-
-    // Open connection page in popup instead of direct OAuth
+  const handleAddStore = () => {
+    // Open connection page in popup
     const connectUrl = experienceId 
       ? `/experiences/${experienceId}/connect-shopify?returnTo=/experiences/${experienceId}/contest/${contest.slug}&popup=true`
       : `/connect-shopify?returnTo=/contest/${contest.slug}&popup=true`
@@ -148,30 +102,24 @@ export function ContestJoinButton({ contest, userId, isParticipating, experience
 
     if (!popup) {
       setError('Popup blocked. Please allow popups and try again.')
-      setIsJoining(false)
       return
     }
 
     // Listen for messages from the popup
     const handleMessage = (event: MessageEvent) => {
-      // Ensure message is from our domain
       if (event.origin !== window.location.origin) {
         return
       }
 
       if (event.data.type === 'SHOPIFY_OAUTH_SUCCESS') {
-        // Connection successful - refresh store status
         popup.close()
         window.removeEventListener('message', handleMessage)
-        
-        // Refresh the component to show new connection status
+        // Refresh the page to show new store and update join status
         window.location.reload()
       } else if (event.data.type === 'SHOPIFY_OAUTH_ERROR') {
-        // Connection failed
         popup.close()
         window.removeEventListener('message', handleMessage)
         setError(event.data.error || 'Failed to connect Shopify store')
-        setIsJoining(false)
       }
     }
 
@@ -182,9 +130,30 @@ export function ContestJoinButton({ contest, userId, isParticipating, experience
       if (popup.closed) {
         clearInterval(checkClosed)
         window.removeEventListener('message', handleMessage)
-        setIsJoining(false)
       }
     }, 1000)
+  }
+
+  const handleJoinClick = async () => {
+    if (!userId) {
+      setError("You must be logged in to join a contest")
+      return
+    }
+
+    // If user doesn't have stores, prompt to add one
+    if (stores.length === 0) {
+      handleAddStore()
+      return
+    }
+
+    // If multiple stores and none selected, show error
+    if (stores.length > 1 && !selectedStoreId) {
+      setError("Please select a Shopify store to use for this contest")
+      return
+    }
+
+    // Proceed with joining the contest
+    await handleJoin()
   }
 
   const handleJoin = async () => {
@@ -192,12 +161,14 @@ export function ContestJoinButton({ contest, userId, isParticipating, experience
     setError(null)
 
     try {
-      // TODO: Implement contest joining API
       const response = await fetch(`/api/contests/${contest.id}/join`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          storeId: selectedStoreId || stores[0]?.id
+        }),
       })
 
       if (!response.ok) {
@@ -270,7 +241,7 @@ export function ContestJoinButton({ contest, userId, isParticipating, experience
       }
     }
 
-    if (hasShopifyStore === false) {
+    if (stores.length === 0) {
       return {
         canJoin: true,
         reason: "Connect your Shopify store to join",
@@ -289,7 +260,7 @@ export function ContestJoinButton({ contest, userId, isParticipating, experience
 
   const joinStatus = getJoinStatus()
 
-  if (checkingStore) {
+  if (checkingStores) {
     return (
       <Card className="border-2 border-emerald-200">
         <CardContent className="p-6">
@@ -316,42 +287,32 @@ export function ContestJoinButton({ contest, userId, isParticipating, experience
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Shopify Connection Status */}
-        {userId && hasShopifyStore !== null && (
-          <div className={`p-3 rounded-lg border ${
-            hasShopifyStore 
-              ? 'bg-green-50 border-green-200' 
-              : 'bg-orange-50 border-orange-200'
-          }`}>
+        {userId && stores.length > 0 && (
+          <div className="p-3 rounded-lg border">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <ShoppingBag className={`w-4 h-4 ${hasShopifyStore ? 'text-green-600' : 'text-orange-600'}`} />
+                <ShoppingBag className="w-4 h-4" />
                 <div>
-                  <span className={`text-sm font-medium ${hasShopifyStore ? 'text-green-900' : 'text-orange-900'}`}>
-                    {hasShopifyStore ? 'Store Connected' : 'No Store Connected'}
+                  <span className="text-sm font-medium">
+                    {stores.length > 1 ? (
+                      <Select value={selectedStoreId} onValueChange={setSelectedStoreId}>
+                        <SelectTrigger className="w-[120px]">
+                          <SelectValue placeholder="Select store" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {stores.map((store) => (
+                            <SelectItem key={store.id} value={store.id}>
+                              {store.shopDomain}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      stores[0].shopDomain
+                    )}
                   </span>
-                  {hasShopifyStore && storeDetails && (
-                    <p className="text-xs text-green-700 mt-0.5">
-                      {storeDetails.shopDomain}
-                    </p>
-                  )}
                 </div>
               </div>
-              
-              {hasShopifyStore && storeDetails && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleDisconnectStore}
-                  disabled={disconnecting}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 px-2"
-                >
-                  {disconnecting ? (
-                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600"></div>
-                  ) : (
-                    'Disconnect'
-                  )}
-                </Button>
-              )}
             </div>
           </div>
         )}
@@ -436,9 +397,35 @@ export function ContestJoinButton({ contest, userId, isParticipating, experience
 
         {/* Additional Info */}
         {joinStatus.requiresShopify && (
-          <p className="text-xs text-gray-500 text-center">
-            You need a connected Shopify store to participate in sales contests
-          </p>
+          <div className="space-y-2">
+            <p className="text-xs text-gray-500 text-center">
+              You need a connected Shopify store to participate in sales contests
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleAddStore}
+              className="w-full"
+            >
+              <ShoppingBag className="w-4 h-4 mr-2" />
+              Connect Shopify Store
+            </Button>
+          </div>
+        )}
+        
+        {/* Add More Stores for users who already have stores */}
+        {stores.length > 0 && !isParticipating && (
+          <div className="pt-2 border-t">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleAddStore}
+              className="w-full text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+            >
+              <ShoppingBag className="w-4 h-4 mr-2" />
+              Add Another Store
+            </Button>
+          </div>
         )}
         
         {contest.entryFeeCents > 0 && !isParticipating && !joinStatus.requiresShopify && (

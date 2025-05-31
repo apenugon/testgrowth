@@ -119,8 +119,28 @@ export async function GET(request: Request) {
       console.log('Existing user found:', user.id)
     }
 
-    // Check if store already exists
-    console.log('Checking for existing store...')
+    // Check if store is already connected by ANY user (prevent duplicate connections)
+    console.log('Checking if store is already connected by any user...')
+    const storeConnectedByAnyUser = await prisma.shopifyStore.findFirst({
+      where: {
+        shopDomain: shop
+      },
+      include: {
+        user: {
+          select: {
+            whopUserId: true
+          }
+        }
+      }
+    })
+
+    if (storeConnectedByAnyUser && storeConnectedByAnyUser.userId !== user.id) {
+      console.log('Store already connected by another user:', storeConnectedByAnyUser.userId)
+      throw new Error(`This Shopify store (${shop}) is already connected to another account. Each store can only be connected to one Growth Arena account.`)
+    }
+
+    // Check if store already exists for current user
+    console.log('Checking for existing store for current user...')
     const existingStore = await prisma.shopifyStore.findFirst({
       where: {
         userId: user.id,
@@ -239,6 +259,8 @@ export async function GET(request: Request) {
       error: error
     })
     
+    const errorMessage = error instanceof Error ? error.message : 'Failed to connect Shopify store'
+    
     // Always return HTML that checks if it's in a popup or should redirect to error page
     const html = `
       <!DOCTYPE html>
@@ -255,14 +277,25 @@ export async function GET(request: Request) {
               margin: 0;
               background: #fef2f2;
               color: #dc2626;
+              padding: 1rem;
             }
             .error {
               text-align: center;
               padding: 2rem;
+              max-width: 500px;
             }
             .error-icon {
               font-size: 3rem;
               margin-bottom: 1rem;
+            }
+            .error-message {
+              margin: 1rem 0;
+              padding: 1rem;
+              background: #fee2e2;
+              border: 1px solid #fecaca;
+              border-radius: 8px;
+              font-size: 14px;
+              line-height: 1.5;
             }
           </style>
         </head>
@@ -270,7 +303,7 @@ export async function GET(request: Request) {
           <div class="error">
             <div class="error-icon">❌</div>
             <h2>Connection Failed</h2>
-            <p>Unable to connect your Shopify store</p>
+            <div class="error-message">${errorMessage}</div>
             <p id="status">Processing...</p>
           </div>
           <script>
@@ -283,19 +316,19 @@ export async function GET(request: Request) {
               
               window.opener.postMessage({
                 type: 'SHOPIFY_OAUTH_ERROR',
-                error: 'Failed to connect Shopify store'
+                error: '${errorMessage.replace(/'/g, "\\'")}'
               }, '${getBaseUrl()}');
               
               setTimeout(() => {
                 console.log('Closing popup window');
                 window.close();
-              }, 2000);
+              }, 3000);
             } else {
               // Not in popup - redirect to error page
               console.log('Not in popup mode - redirecting to error page');
               document.getElementById('status').textContent = 'Redirecting...';
               const errorUrl = new URL('/error', '${getBaseUrl()}');
-              errorUrl.searchParams.set('message', 'Failed to connect Shopify store');
+              errorUrl.searchParams.set('message', '${errorMessage}');
               window.location.href = errorUrl.toString();
             }
           </script>

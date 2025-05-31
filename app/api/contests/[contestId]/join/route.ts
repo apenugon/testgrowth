@@ -16,6 +16,10 @@ export async function POST(
     }
 
     const { contestId } = await params
+    
+    // Parse request body to get selected store ID
+    const body = await request.json().catch(() => ({}))
+    const { storeId: requestedStoreId } = body
 
     // Find the user record using Whop user ID
     const user = await prisma.user.findUnique({
@@ -68,13 +72,33 @@ export async function POST(
       return NextResponse.json({ error: 'Contest is full' }, { status: 400 })
     }
 
-    // Get user's Shopify store
-    const userStore = await prisma.shopifyStore.findFirst({
-      where: { 
-        userId, // Now using internal user ID
-        isActive: true 
-      },
-    })
+    // Get user's Shopify store - either the specified one or first active one
+    let userStore = null
+    
+    if (requestedStoreId) {
+      // Use specific store if provided
+      userStore = await prisma.shopifyStore.findFirst({
+        where: { 
+          id: requestedStoreId,
+          userId,
+          isActive: true 
+        },
+      })
+      
+      if (!userStore) {
+        return NextResponse.json({ 
+          error: 'Selected Shopify store not found or inactive' 
+        }, { status: 400 })
+      }
+    } else {
+      // Fall back to first active store
+      userStore = await prisma.shopifyStore.findFirst({
+        where: { 
+          userId,
+          isActive: true 
+        },
+      })
+    }
 
     if (!userStore) {
       return NextResponse.json({ 

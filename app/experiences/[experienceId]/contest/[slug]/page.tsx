@@ -153,14 +153,12 @@ export default async function ContestPage({ params }: ContestPageProps) {
             {/* Sidebar */}
             <div className="space-y-6">
               {/* Join/Status Card */}
-              {!isCreator && (
-                <ContestJoinButton
-                  contest={contestForJoinButton}
-                  userId={userId}
-                  isParticipating={isParticipating}
-                  experienceId={experienceId}
-                />
-              )}
+              <ContestJoinButton
+                contest={contestForJoinButton}
+                userId={userId}
+                isParticipating={isParticipating}
+                experienceId={experienceId}
+              />
 
               {/* Contest Stats */}
               <Card>
