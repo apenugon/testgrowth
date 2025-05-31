@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma"
 
 // Helper function to ensure proper URL format
 function getBaseUrl(): string {
-  let baseUrl = process.env.SHOPIFY_APP_URL || 'http://localhost:3000'
+  let baseUrl = process.env.VERCEL_URL || 'http://localhost:3000'
   if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
     baseUrl = `http://${baseUrl}`
   }
