@@ -27,6 +27,7 @@ interface HeaderProps {
   showBackButton?: boolean
   backHref?: string
   backLabel?: string
+  isCreatorMode?: boolean
 }
 
 export function Header({ 
@@ -34,7 +35,8 @@ export function Header({
   experienceId, 
   showBackButton = false, 
   backHref, 
-  backLabel = "Back" 
+  backLabel = "Back",
+  isCreatorMode = false
 }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
@@ -97,9 +99,9 @@ export function Header({
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link href={`/experiences/${experienceId}/dashboard`}>
+                        <Link href={isCreatorMode ? `/experiences/${experienceId}` : `/experiences/${experienceId}/dashboard`}>
                           <Settings className="w-4 h-4 mr-2" />
-                          Switch to creator mode
+                          {isCreatorMode ? 'Switch to competitor mode' : 'Switch to creator mode'}
                         </Link>
                       </DropdownMenuItem>
                     </>
