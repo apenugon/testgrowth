@@ -3,9 +3,9 @@ import { prisma } from './prisma';
 import { createShopifyClient, createWebhook, deleteWebhook } from './shopify';
 
 // Initialize Google Pub/Sub client
-const pubsub = new PubSub({
-  projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
-});
+//const pubsub = new PubSub({
+//  projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
+//});
 
 // Pub/Sub topic names for different webhook types
 const PUBSUB_TOPICS = {
@@ -39,6 +39,7 @@ export class ShopifyWebhookManager implements ContestWebhookManager {
   private async ensureTopicsExist(): Promise<void> {
     for (const topicName of Object.values(PUBSUB_TOPICS)) {
       try {
+			return;
         const topic = pubsub.topic(topicName);
         const [exists] = await topic.exists();
         
@@ -185,6 +186,7 @@ export class ShopifyWebhookManager implements ContestWebhookManager {
 
     for (const [webhookTopic, topicName] of Object.entries(PUBSUB_TOPICS)) {
       try {
+		return;
         const topic = pubsub.topic(topicName);
         const subscriptionName = `projects/growtharena/subscriptions/shopify-sub`;
         const [subscription] = await topic.subscription(subscriptionName).get({ autoCreate: true });
