@@ -4,9 +4,9 @@ import { webhookManager } from "@/lib/webhook-manager";
 import { prisma } from "@/lib/prisma";
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     contestId: string;
-  };
+  }>;
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const contestId = params.contestId;
+    const { contestId } = await params;
 
     // Check if contest exists
     const contest = await prisma.contest.findUnique({
@@ -118,16 +118,18 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { contestId } = await params;
+
     const body = await request.json();
     const action = body.action; // "setup_webhooks" or "test_pubsub"
 
     if (action === "setup_webhooks") {
-      console.log(`Debug: Manually setting up webhooks for contest ${params.contestId}`);
-      await webhookManager.setupWebhooksForContest(params.contestId);
+      console.log(`Debug: Manually setting up webhooks for contest ${contestId}`);
+      await webhookManager.setupWebhooksForContest(contestId);
       
       return NextResponse.json({ 
         success: true, 
-        message: `Webhooks set up for contest ${params.contestId}` 
+        message: `Webhooks set up for contest ${contestId}` 
       });
     } else if (action === "test_pubsub") {
       console.log("Debug: Testing Pub/Sub connection");

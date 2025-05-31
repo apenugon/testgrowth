@@ -7,9 +7,9 @@ import { whopApi } from "@/lib/whop-api";
 import { isUserAdmin } from "@/lib/permissions";
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     contestId: string;
-  };
+  }>;
 }
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
@@ -19,6 +19,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const { contestId } = await params;
 
     // Get user data from Whop and create/update in our database
     const whopUser = await whopApi.getUser({ userId });
@@ -35,7 +37,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Check if user is admin or contest creator
     const contest = await prisma.contest.findUnique({
-      where: { id: params.contestId },
+      where: { id: contestId },
       select: { creatorId: true, status: true },
     });
 
@@ -59,7 +61,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       }, { status: 400 });
     }
 
-    await updateContestStatus(params.contestId, newStatus);
+    await updateContestStatus(contestId, newStatus);
 
     return NextResponse.json({ 
       success: true, 
@@ -85,9 +87,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { contestId } = await params;
+
     // Get contest status
     const contest = await prisma.contest.findUnique({
-      where: { id: params.contestId },
+      where: { id: contestId },
       select: { 
         id: true,
         status: true, 
@@ -107,7 +111,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const shouldBeClosed = now > contest.endAt;
 
     return NextResponse.json({
-      contestId: params.contestId,
+      contestId: contestId,
       currentStatus: contest.status,
       startAt: contest.startAt,
       endAt: contest.endAt,

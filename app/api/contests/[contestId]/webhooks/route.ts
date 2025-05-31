@@ -6,10 +6,10 @@ import { createOrUpdateUser } from "@/lib/db/users";
 import { whopApi } from "@/lib/whop-api";
 import { isUserAdmin } from "@/lib/permissions";
 
-interface RouteParams {
-  params: {
+interface RouteParams {	
+  params: Promise<{
     contestId: string;
-  };
+  }>;
 }
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
@@ -19,6 +19,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const { contestId } = await params;
 
     // Get user data from Whop and create/update in our database
     const whopUser = await whopApi.getUser({ userId });
@@ -35,7 +37,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Check if user is admin or contest creator
     const contest = await prisma.contest.findUnique({
-      where: { id: params.contestId },
+      where: { id: contestId },
       select: { creatorId: true },
     });
 
@@ -54,13 +56,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const action = body.action; // "start" or "stop"
 
     if (action === "start") {
-      await webhookManager.setupWebhooksForContest(params.contestId);
+      await webhookManager.setupWebhooksForContest(contestId);
       return NextResponse.json({ 
         success: true, 
         message: "Webhooks set up successfully" 
       });
     } else if (action === "stop") {
-      await webhookManager.removeWebhooksForContest(params.contestId);
+      await webhookManager.removeWebhooksForContest(contestId);
       return NextResponse.json({ 
         success: true, 
         message: "Webhooks removed successfully" 
@@ -88,10 +90,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { contestId } = await params;
+
     // Get webhook subscription status for the contest
     const subscriptions = await prisma.webhookSubscription.findMany({
       where: { 
-        contestId: params.contestId,
+        contestId: contestId,
         isActive: true 
       },
       include: {
@@ -122,7 +126,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }, {});
 
     return NextResponse.json({
-      contestId: params.contestId,
+      contestId: contestId,
       activeWebhooks: Object.values(groupedSubscriptions),
       totalStores: Object.keys(groupedSubscriptions).length,
     });

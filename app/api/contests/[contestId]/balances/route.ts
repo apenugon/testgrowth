@@ -4,9 +4,9 @@ import { getContestBalances } from "@/lib/webhook-manager";
 import { prisma } from "@/lib/prisma";
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     contestId: string;
-  };
+  }>;
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
@@ -16,10 +16,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
+    const { contestId } = await params;
     // Check if contest exists
     const contest = await prisma.contest.findUnique({
-      where: { id: params.contestId },
+      where: { id: contestId },
       select: { 
         id: true, 
         name: true, 
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Get contest balances
-    const balances = await getContestBalances(params.contestId);
+    const balances = await getContestBalances(contestId);
 
     // Transform the data for the response
     const leaderboard = balances.map((balance: any, index: number) => ({
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }));
 
     return NextResponse.json({
-      contestId: params.contestId,
+      contestId: contestId,
       contestName: contest.name,
       metric: contest.metric,
       startAt: contest.startAt,

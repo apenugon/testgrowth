@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { contestId: string } }
+  { params }: { params: Promise<{ contestId: string }> }
 ) {
   try {
     // Verify user authentication
@@ -14,7 +14,7 @@ export async function POST(
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
-    const { contestId } = params
+    const { contestId } = await params;
 
     // Find the user record using Whop user ID
     const user = await prisma.user.findUnique({
