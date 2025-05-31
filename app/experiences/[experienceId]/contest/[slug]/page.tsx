@@ -8,6 +8,7 @@ import { ContestLeaderboard } from "@/components/contest/contest-leaderboard"
 import { ContestJoinButton } from "@/components/contest/contest-join-button"
 import { Card, CardContent } from "@/components/ui/card"
 import { whopApi } from "@/lib/whop-api"
+import { prisma } from "@/lib/prisma"
 
 interface ContestPageProps {
   params: Promise<{ 
@@ -47,6 +48,7 @@ export default async function ContestPage({ params }: ContestPageProps) {
 
   // Get user data if authenticated
   let user = null
+  let internalUserId = null
   if (userId) {
     try {
       const whopUser = await whopApi.getUser({ userId })
@@ -57,18 +59,26 @@ export default async function ContestPage({ params }: ContestPageProps) {
           username: publicUser.username
         }
       }
+
+      // Map Whop user ID to internal user ID
+      const dbUser = await prisma.user.findUnique({
+        where: { whopUserId: userId }
+      })
+      if (dbUser) {
+        internalUserId = dbUser.id
+      }
     } catch (error) {
       console.error("Error fetching user data:", error)
     }
   }
 
-  // Check if user is already participating
-  const isParticipating = userId 
-    ? contest.participants.some(p => p.userId === userId)
+  // Check if user is already participating (using internal user ID)
+  const isParticipating = internalUserId 
+    ? contest.participants.some(p => p.userId === internalUserId)
     : false
 
-  // Check if user is the creator
-  const isCreator = userId === contest.creatorId
+  // Check if user is the creator (using internal user ID)
+  const isCreator = internalUserId === contest.creatorId
 
   // Transform contest data to match component types
   const participantsForLeaderboard = contest.participants.map(p => ({
@@ -170,17 +180,6 @@ export default async function ContestPage({ params }: ContestPageProps) {
                       <span className="text-gray-600">Metric</span>
                       <span className="font-medium">
                         {contest.metric === 'TOTAL_SALES' ? 'Total Sales' : 'Order Count'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Status</span>
-                      <span className={`font-medium capitalize ${
-                        contest.status === 'ACTIVE' ? 'text-emerald-600' :
-                        contest.status === 'DRAFT' ? 'text-gray-600' :
-                        contest.status === 'CLOSED' ? 'text-red-600' :
-                        'text-gray-600'
-                      }`}>
-                        {contest.status.toLowerCase()}
                       </span>
                     </div>
                     {contest.entryFeeCents > 0 && (

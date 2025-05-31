@@ -1,9 +1,10 @@
 "use client"
 
+import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Calendar, Clock, DollarSign, Trophy, Users, Globe, Lock, Target, Edit } from "lucide-react"
+import { Calendar, Clock, DollarSign, Trophy, Users, Globe, Lock, Target, Edit, Play } from "lucide-react"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import Link from "next/link"
 
@@ -37,6 +38,9 @@ interface ContestHeaderProps {
 }
 
 export function ContestHeader({ contest, isCreator, participantCount }: ContestHeaderProps) {
+  const [isForceStarting, setIsForceStarting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  
   // Calculate total prize pool
   const calculateTotalPrizePool = () => {
     if (contest.prizePoolType === "ENTRY_FEES") {
@@ -46,6 +50,32 @@ export function ContestHeader({ contest, isCreator, participantCount }: ContestH
     } else {
       // HYBRID
       return (contest.entryFeeCents * participantCount) + contest.prizePoolCents
+    }
+  }
+
+  const handleForceStart = async () => {
+    setIsForceStarting(true)
+    setError(null)
+    
+    try {
+      const response = await fetch(`/api/contests/${contest.id}/force-start`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to start contest')
+      }
+
+      // Refresh the page to update contest state
+      window.location.reload()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
+    } finally {
+      setIsForceStarting(false)
     }
   }
 
@@ -107,11 +137,28 @@ export function ContestHeader({ contest, isCreator, participantCount }: ContestH
           </div>
 
           {isCreator && (
-            <Button variant="outline" disabled>
-              <Edit className="w-4 h-4 mr-2" />
-              Manage Contest
-              {/* TODO: Update to use /experiences/{experienceId}/contest/{slug}/manage when implemented */}
-            </Button>
+            <div className="flex space-x-2">
+              {!hasStarted && !hasEnded && (
+                <Button 
+                  variant="default" 
+                  className="bg-emerald-600 hover:bg-emerald-700"
+                  onClick={handleForceStart}
+                  disabled={isForceStarting}
+                >
+                  {isForceStarting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Starting...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-4 h-4 mr-2" />
+                      Force Start
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
           )}
         </div>
 
@@ -142,7 +189,7 @@ export function ContestHeader({ contest, isCreator, participantCount }: ContestH
               <h3 className="font-semibold text-gray-900">Entry Fee</h3>
             </div>
             <div className="text-2xl font-bold text-emerald-600">
-              {contest.entryFeeCents === 0 ? 'FREE' : formatCurrency(contest.entryFeeCents)}
+              {contest.entryFeeCents === 0 ? 'FREE TO JOIN' : formatCurrency(contest.entryFeeCents)}
             </div>
           </div>
 
@@ -213,6 +260,13 @@ export function ContestHeader({ contest, isCreator, participantCount }: ContestH
                 }
               </span>
             </div>
+          </div>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-700">{error}</p>
           </div>
         )}
       </CardContent>

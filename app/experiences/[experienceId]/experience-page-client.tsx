@@ -209,17 +209,11 @@ export function ExperiencePageClient({
               <h3 className="text-lg font-medium text-gray-900 mb-2">
                 No {activeFilter} contests
               </h3>
-              <p className="text-gray-600 mb-6">
+              <p className="text-gray-600">
                 {activeFilter === 'upcoming' && "Check back soon for new contests!"}
                 {activeFilter === 'live' && "No contests are currently running."}
                 {activeFilter === 'ended' && "No completed contests to show."}
               </p>
-              <Button variant="outline" asChild>
-                <Link href={`/experiences/${experienceId}/dashboard`}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Contest
-                </Link>
-              </Button>
             </CardContent>
           </Card>
         ) : (
@@ -290,25 +284,39 @@ export function ExperiencePageClient({
 
                       {/* Action Buttons */}
                       <div className="flex flex-col space-y-2 ml-6">
-                        {activeFilter !== 'ended' ? (
+                        {activeFilter === 'upcoming' ? (
+                          <>
+                            <Button asChild>
+                              <Link href={`/experiences/${experienceId}/contest/${contest.slug}`}>
+                                Join Contest
+                              </Link>
+                            </Button>
+                            <Button variant="ghost" size="sm" asChild>
+                              <Link href={`/experiences/${experienceId}/contest/${contest.slug}`}>
+                                View Details
+                              </Link>
+                            </Button>
+                          </>
+                        ) : activeFilter === 'live' ? (
                           <Button asChild>
                             <Link href={`/experiences/${experienceId}/contest/${contest.slug}`}>
-                              Join Contest
+                              View Details
                             </Link>
                           </Button>
                         ) : (
-                          <Button variant="outline" asChild>
-                            <Link href={`/experiences/${experienceId}/contest/${contest.slug}`}>
-                              View Results
-                            </Link>
-                          </Button>
+                          <>
+                            <Button variant="outline" asChild>
+                              <Link href={`/experiences/${experienceId}/contest/${contest.slug}`}>
+                                View Results
+                              </Link>
+                            </Button>
+                            <Button variant="ghost" size="sm" asChild>
+                              <Link href={`/experiences/${experienceId}/contest/${contest.slug}`}>
+                                View Details
+                              </Link>
+                            </Button>
+                          </>
                         )}
-                        
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link href={`/experiences/${experienceId}/contest/${contest.slug}`}>
-                            View Details
-                          </Link>
-                        </Button>
                       </div>
                     </div>
                   </CardContent>

@@ -242,6 +242,16 @@ export function ContestJoinButton({ contest, userId, isParticipating, experience
       }
     }
 
+    // Check if contest has already started - REQUIREMENT 1
+    if (hasStarted) {
+      return {
+        canJoin: false,
+        reason: "Contest has already started",
+        icon: <Clock className="w-4 h-4" />,
+        requiresShopify: false
+      }
+    }
+
     if (isFull) {
       return {
         canJoin: false,
@@ -269,19 +279,10 @@ export function ContestJoinButton({ contest, userId, isParticipating, experience
       }
     }
 
-    if (!hasStarted) {
-      return {
-        canJoin: true,
-        reason: `Starts ${formatDate(new Date(contest.startAt))}`,
-        icon: <Clock className="w-4 h-4" />,
-        requiresShopify: false
-      }
-    }
-
     return {
       canJoin: true,
-      reason: "Ready to join",
-      icon: <Users className="w-4 h-4" />,
+      reason: `Starts ${formatDate(new Date(contest.startAt))}`,
+      icon: <Clock className="w-4 h-4" />,
       requiresShopify: false
     }
   }
@@ -368,7 +369,7 @@ export function ContestJoinButton({ contest, userId, isParticipating, experience
           </div>
         ) : (
           <div className="flex items-center justify-center p-3 bg-green-50 rounded-lg">
-            <span className="text-sm font-medium text-green-900">Free to Join</span>
+            <span className="text-sm font-medium text-green-900">FREE TO JOIN</span>
           </div>
         )}
 
