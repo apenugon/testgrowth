@@ -5,13 +5,11 @@ import { createHmac } from 'crypto'
 export interface ShopifyConfig {
   apiKey: string
   apiSecret: string
-  webhookSecret: string
 }
 
 export const shopifyConfig: ShopifyConfig = {
-  apiKey: process.env.SHOPIFY_API_KEY || '',
-  apiSecret: process.env.SHOPIFY_API_SECRET || '',
-  webhookSecret: process.env.SHOPIFY_WEBHOOK_SECRET || '',
+  apiKey: process.env.SHOPIFY_APP_API_KEY || '',
+  apiSecret: process.env.SHOPIFY_APP_SECRET || '',
 }
 
 export function createShopifyClient(shopDomain: string, accessToken: string) {
@@ -65,11 +63,11 @@ export async function exchangeCodeForToken(
 }
 
 export function verifyShopifyWebhook(body: string, signature: string): boolean {
-  if (!process.env.SHOPIFY_WEBHOOK_SECRET) {
-    throw new Error('SHOPIFY_WEBHOOK_SECRET is not set')
+  if (!process.env.SHOPIFY_APP_SECRET) {
+    throw new Error('SHOPIFY_APP_SECRET is not set')
   }
 
-  const hmac = createHmac('sha256', process.env.SHOPIFY_WEBHOOK_SECRET)
+  const hmac = createHmac('sha256', process.env.SHOPIFY_APP_SECRET)
   hmac.update(body, 'utf8')
   const calculatedSignature = hmac.digest('base64')
 
@@ -95,16 +93,97 @@ export function parseShopifyOrder(orderData: Record<string, unknown>) {
 export async function createWebhook(
   shopDomain: string,
   accessToken: string,
-  webhookUrl: string,
-  topic: 'orders/paid' | 'orders/create' | 'orders/updated'
+  pubsubTopic: string,
+  topic: 'orders/paid' | 'orders/create' | 'orders/updated' | 'refunds/create'
 ) {
-  const shopify = createShopifyClient(shopDomain, accessToken)
+  const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
+  if (!projectId) {
+    throw new Error('GOOGLE_CLOUD_PROJECT_ID environment variable is required');
+  }
+
+  const topicEnum = topic.toUpperCase().replace('/', '_');
   
-  return shopify.webhook.create({
-    topic: topic as 'orders/paid' | 'orders/create' | 'orders/updated',
-    address: webhookUrl,
-    format: 'json',
-  })
+  const mutation = `
+    mutation pubSubWebhookSubscriptionCreate($topic: WebhookSubscriptionTopic!, $webhookSubscription: PubSubWebhookSubscriptionInput!) {
+      pubSubWebhookSubscriptionCreate(topic: $topic, webhookSubscription: $webhookSubscription) {
+        webhookSubscription {
+          id
+          endpoint {
+            __typename
+            ... on WebhookPubSubEndpoint {
+              pubSubProject
+              pubSubTopic
+            }
+          }
+        }
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+  `;
+
+  // Define the fields we want based on topic type
+  let includeFields: string[];
+  if (topic.startsWith('orders/')) {
+    includeFields = [
+      "totalPriceSet",
+    ];
+  } else if (topic.startsWith('refunds/')) {
+    includeFields = [
+      "id",
+      "order_id", 
+      "created_at",
+      "totalRefundedSet"
+    ];
+  } else {
+    includeFields = ["id", "created_at", "updated_at"];
+  }
+
+  const variables = {
+    topic: topicEnum,
+    webhookSubscription: {
+      pubSubProject: projectId,
+      pubSubTopic: pubsubTopic,
+      format: "JSON",
+      includeFields: includeFields
+    }
+  };
+
+  const response = await fetch(`https://${shopDomain}/admin/api/2025-01/graphql.json`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Shopify-Access-Token': accessToken,
+    },
+    body: JSON.stringify({
+      query: mutation,
+      variables: variables,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`GraphQL request failed: ${response.status} ${response.statusText}`);
+  }
+
+  const result = await response.json();
+  
+  if (result.errors) {
+    throw new Error(`GraphQL errors: ${JSON.stringify(result.errors)}`);
+  }
+
+  const { pubSubWebhookSubscriptionCreate } = result.data;
+  
+  if (pubSubWebhookSubscriptionCreate.userErrors.length > 0) {
+    throw new Error(`Webhook creation failed: ${JSON.stringify(pubSubWebhookSubscriptionCreate.userErrors)}`);
+  }
+
+  return {
+    id: pubSubWebhookSubscriptionCreate.webhookSubscription.id,
+    pubSubProject: pubSubWebhookSubscriptionCreate.webhookSubscription.endpoint.pubSubProject,
+    pubSubTopic: pubSubWebhookSubscriptionCreate.webhookSubscription.endpoint.pubSubTopic,
+  };
 }
 
 export async function getOrders(
@@ -134,4 +213,58 @@ export async function getOrders(
   }
   
   return shopify.order.list(params)
+}
+
+export async function deleteWebhook(
+  shopDomain: string,
+  accessToken: string,
+  webhookId: string
+) {
+  const mutation = `
+    mutation webhookSubscriptionDelete($id: ID!) {
+      webhookSubscriptionDelete(id: $id) {
+        deletedWebhookSubscriptionId
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+  `;
+
+  const variables = {
+    id: webhookId,
+  };
+
+  const response = await fetch(`https://${shopDomain}/admin/api/2025-01/graphql.json`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Shopify-Access-Token': accessToken,
+    },
+    body: JSON.stringify({
+      query: mutation,
+      variables: variables,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`GraphQL request failed: ${response.status} ${response.statusText}`);
+  }
+
+  const result = await response.json();
+  
+  if (result.errors) {
+    throw new Error(`GraphQL errors: ${JSON.stringify(result.errors)}`);
+  }
+
+  const { webhookSubscriptionDelete } = result.data;
+  
+  if (webhookSubscriptionDelete.userErrors.length > 0) {
+    throw new Error(`Webhook deletion failed: ${JSON.stringify(webhookSubscriptionDelete.userErrors)}`);
+  }
+
+  return {
+    deletedId: webhookSubscriptionDelete.deletedWebhookSubscriptionId,
+  };
 } 

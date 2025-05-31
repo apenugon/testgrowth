@@ -44,6 +44,9 @@ model ShopifyStore {
   user                User @relation(fields: [userId], references: [id], onDelete: Cascade)
   contestParticipants ContestParticipant[]
   orderSnapshots      OrderSnapshot[]
+  contestBalances     ContestStoreBalance[]
+  webhookSubscriptions WebhookSubscription[]
+  orderEvents         OrderEvent[]
 
   @@unique([userId, shopDomain])
   @@map("shopify_stores")
@@ -78,6 +81,8 @@ model Contest {
   creator      User @relation("ContestCreator", fields: [creatorId], references: [id], onDelete: Cascade)
   participants ContestParticipant[]
   orderSnapshots OrderSnapshot[]
+  contestBalances ContestStoreBalance[]
+  webhookSubscriptions WebhookSubscription[]
 
   @@map("contests")
 }
@@ -99,6 +104,63 @@ model ContestParticipant {
 
   @@id([contestId, userId])
   @@map("contest_participants")
+}
+
+// New model to track running balances for each store-contest combination
+model ContestStoreBalance {
+  id            String @id @default(cuid())
+  contestId     String @map("contest_id")
+  storeId       String @map("store_id")
+  totalSales    Int    @default(0) @map("total_sales") // Running total in cents
+  orderCount    Int    @default(0) @map("order_count") // Running count
+  lastUpdatedAt DateTime @updatedAt @map("last_updated_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  // Relations
+  contest Contest @relation(fields: [contestId], references: [id], onDelete: Cascade)
+  store   ShopifyStore @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([contestId, storeId])
+  @@map("contest_store_balances")
+}
+
+// Track webhook subscriptions for each contest-store combination
+model WebhookSubscription {
+  id          String  @id @default(cuid())
+  contestId   String  @map("contest_id")
+  storeId     String  @map("store_id")
+  webhookId   String  @map("webhook_id") // Shopify webhook ID
+  topic       String  // "orders/paid", "orders/create", "refunds/create"
+  isActive    Boolean @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  contest Contest @relation(fields: [contestId], references: [id], onDelete: Cascade)
+  store   ShopifyStore @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([contestId, storeId, topic])
+  @@map("webhook_subscriptions")
+}
+
+// Track individual order events processed through webhooks
+model OrderEvent {
+  id            String @id @default(cuid())
+  storeId       String @map("store_id")
+  orderId       String @map("order_id") // Shopify order ID
+  eventType     String @map("event_type") // "order_paid", "order_created", "refund_created"
+  amount        Int    // Amount in cents (positive for orders, negative for refunds)
+  currency      String @default("USD")
+  orderNumber   String? @map("order_number")
+  processedAt   DateTime @default(now()) @map("processed_at")
+  webhookData   String? @map("webhook_data") // JSON payload for debugging
+
+  // Relations
+  store ShopifyStore @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, orderId, eventType])
+  @@index([storeId, processedAt])
+  @@map("order_events")
 }
 
 model OrderSnapshot {
