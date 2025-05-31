@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
   try {
+	return;
     // Skip auth in development mode for debugging
     if (process.env.NODE_ENV === 'development') {
       console.log('🛠️ Development mode: skipping auth for test webhook endpoint');
