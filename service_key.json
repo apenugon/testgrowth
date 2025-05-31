@@ -1,0 +1,13 @@
+{
+	"type": "service_account",
+	"project_id": "growtharena",
+	"private_key_id": "8e29299f06e38afb007a5172c9cfefadc9f4400f",
+	"private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQD2Qjdji04Qhfvb\nsZjMfJFqya23QmlXdez2PchAt023xr2UP4LIG5YoSuQN9xPbm6Cd3zsDDZSjOa5b\n6+FFG1Mz4nzHiAOqYRbWfznSJHg1j1lnsKRU5+rxhsnVCh//2E3A74lwxhRoSfEF\nZ4wVsTAf03z9AtjX/EZ/twY1aDvevoWXqcoWhx3mnqUc6Kkfqdb3nWTLlUseIGwt\nIyR4eexCUIa5X1/XoqkpJ4gs3iVgJY+udXmyz3yS9M6VbR/bEzF0h+GwLjRWjQN+\nPHJoKH/OG4Drmq/Ct77jtt3ESRa4S5L+cVoXOHT7uU6SATKPzgw2LGSAwAQmuZMr\n2FLY2OojAgMBAAECggEAJZ5k7rh7ouuM13lQYcCPyFPpzSqAhCNYIR+8BSLbZP0f\nvdNb66zHKf2SzA1YA77I8QUGc0dyUuL/Xzxv68oqUi1BqYt+H9t4DSlfUFpQ4MG2\nwy/JUs0g52eTUo+a5s8IxbXx9X/U4z+UaaJxVGj+dIYuvEngjVIVBPKVKLh1GOgO\nMA+gvTDxNDELnknWkm8Bcps4uZ+Fy0rb9DKWV09lRVY8A+Bbm8xfJMSpfM92sExN\n94pSLIVBiA32mR4kyQaQQEemCFOmFDf7F2KqRuaL21mhSIuweRXoG9RmVDQ/DIY8\nT2VzboETe3h1xT625fcJBb7wBer/1VPX+LDU8AQv4QKBgQD/gQEzdYOe+Uerk5rZ\naBr2jrLbozeJWXQETzHH7qb7Ld+Si8VY1Wm1DFes39I9Li6nPEN+iI8jd2l731q5\n9SnJyC1JSRksxrY1poqiGMnph1dn0cJXqA/EA4W7rXdUFbI5kHcES7k3aGzruzwm\n6AaTWAzASOyAHSuoFmP0Au14wwKBgQD2vJ3NfsuqRA5YqcebklaPdpeTh9CfQ/W/\nqYJfD0idkriyJusPm/QRX+Az1wBJAvP/u2jF/rtkdz2SYULEbaGsITbNIT6FLkkl\n2OCG67ZtnzCATKRLc9Lru167+Ga3HxhPwrMJMwg8PpjmYbH0EyBRRvbMYWC8WSNo\nvKCas0SzIQKBgQDFLTlQDRBWTuoQbwjBXqXwQI+nEH57cJ0n9jXkpTgX/37aCSNz\nOr8pCS1gLBqDPHCkfs1XiOtt42l0Pxo1CA4HuoO4WsEi3Pcg0DWMgrTPk7LQXAAu\nxXPlQRKjk2rTaSrxYZt3pTh6mgv0n7n8DHOGohy1B5H8DIb0YNMiLGA3IQKBgDbt\n2ruq5LBtIjx+3580vuyFXE1NyRYLzSP0GsAK6QGbbl7K5z28XGOZ0pH35Wpbq/Jc\nyIB7q0A8g4qY+II+XeWyJz8XjZGcslAoriObSiuxatzFMzZQ/L3aIsb6D/PoikMH\nd1Au+kBfNy7ixPkvYNx3Te5GJ4EG3yksBR0rl7nBAoGAAxuXG8tzUzS4ja5OpaEX\n33kgK9iTFHHBScbXdgGjzhwgJZby/l7Z3ouA7gX2TpyM2j/Op45f9Xw/1PLmsahx\nTySS55/UU3rqHsE4+s7jx5Sud537JNMSL0y/FxAoM8cUSYNJjXcnLkmh3z5oewob\nOEcmwSRKqsSHuMvr1E7g2Pw=\n-----END PRIVATE KEY-----\n",
+	"client_email": "growtharenasub@growtharena.iam.gserviceaccount.com",
+	"client_id": "105525673886714013481",
+	"auth_uri": "https://accounts.google.com/o/oauth2/auth",
+	"token_uri": "https://oauth2.googleapis.com/token",
+	"auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+	"client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/growtharenasub%40growtharena.iam.gserviceaccount.com",
+	"universe_domain": "googleapis.com"
+ }
