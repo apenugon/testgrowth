@@ -25,10 +25,10 @@ export async function POST(request: NextRequest): Promise<Response> {
 		// if you need to do work that takes a long time, use waitUntil to run it in the background
 		waitUntil(
 			potentiallyLongRunningHandler(
-				user_id,
+				user_id || "unknown",
 				final_amount,
 				currency,
-				amount_after_fees,
+				amount_after_fees || 0,
 			),
 		);
 	}
@@ -38,11 +38,11 @@ export async function POST(request: NextRequest): Promise<Response> {
 }
 
 async function potentiallyLongRunningHandler(
-	_user_id: string | null | undefined,
-	_amount: number,
-	_currency: string,
-	_amount_after_fees: number | null | undefined,
+	userId: string,
+	finalAmount: number,
+	currency: string,
+	amountAfterFees: number,
 ) {
-	// This is a placeholder for a potentially long running operation
-	// In a real scenario, you might need to fetch user data, update a database, etc.
+	// Do some work here
+	console.log(`Processing payment for user ${userId}: ${finalAmount} ${currency}, received: ${amountAfterFees}`)
 }
