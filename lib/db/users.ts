@@ -7,7 +7,7 @@ export async function createOrUpdateUser(whopUserData: {
   name?: string
   username?: string
 }): Promise<User> {
-  return prisma.user.upsert({
+  const user = await prisma.user.upsert({
     where: { whopUserId: whopUserData.id },
     update: {
       email: whopUserData.email,
@@ -21,6 +21,29 @@ export async function createOrUpdateUser(whopUserData: {
       username: whopUserData.username,
     },
   })
+
+  // Check if this user was pre-whitelisted and link the whitelist entry
+  if (whopUserData.username) {
+    try {
+      const preWhitelistEntry = await prisma.creatorWhitelist.findUnique({
+        where: { username: whopUserData.username.toLowerCase() }
+      })
+
+      // If found and not yet linked to a user, link it now
+      if (preWhitelistEntry && !preWhitelistEntry.userId) {
+        await prisma.creatorWhitelist.update({
+          where: { id: preWhitelistEntry.id },
+          data: { userId: user.id }
+        })
+        console.log(`Linked pre-whitelisted user ${whopUserData.username} to user ID ${user.id}`)
+      }
+    } catch (error) {
+      console.error("Error linking pre-whitelisted user:", error)
+      // Don't fail user creation if this fails
+    }
+  }
+
+  return user
 }
 
 export async function findUserByWhopId(whopUserId: string): Promise<User | null> {

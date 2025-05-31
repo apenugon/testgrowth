@@ -42,6 +42,8 @@ type ExperiencePageClientProps = {
   experienceId: string;
   accessLevel: string;
   userToken: string | null;
+  isAdmin?: boolean;
+  isWhitelistedCreator?: boolean;
 };
 
 export function ExperiencePageClient({
@@ -51,6 +53,8 @@ export function ExperiencePageClient({
   experienceId,
   accessLevel,
   userToken,
+  isAdmin,
+  isWhitelistedCreator,
 }: ExperiencePageClientProps) {
   const [allContests, setAllContests] = useState<Contest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -158,6 +162,8 @@ export function ExperiencePageClient({
       <Header 
         user={user}
         experienceId={experienceId}
+        isAdmin={isAdmin}
+        isWhitelistedCreator={isWhitelistedCreator}
       />
       
       <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">

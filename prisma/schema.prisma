@@ -23,6 +23,9 @@ model User {
   shopifyStores       ShopifyStore[]
   createdContests     Contest[] @relation("ContestCreator")
   contestParticipants ContestParticipant[]
+  adminUser           AdminUser?
+  whitelistEntry      CreatorWhitelist? @relation("WhitelistedUser")
+  whitelistAdmin      CreatorWhitelist[] @relation("WhitelistAdmin")
 
   @@map("users")
 }
@@ -143,4 +146,31 @@ model ContestPayout {
 
   @@index([contestId, rank])
   @@map("contest_payouts")
+}
+
+// Admin and Creator Whitelist Management
+model AdminUser {
+  id        String   @id @default(cuid())
+  userId    String   @unique @map("user_id") // References User.id
+  username  String   @unique // For easy lookup (e.g., "akulkid")
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("admin_users")
+}
+
+model CreatorWhitelist {
+  id        String   @id @default(cuid())
+  userId    String?  @unique @map("user_id") // References User.id - now nullable for pre-whitelisting
+  username  String   @unique // For easy lookup and management
+  addedBy   String   @map("added_by") // References AdminUser.userId
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  // Relations
+  user    User? @relation("WhitelistedUser", fields: [userId], references: [id], onDelete: Cascade)
+  admin   User @relation("WhitelistAdmin", fields: [addedBy], references: [id], onDelete: Cascade)
+
+  @@map("creator_whitelist")
 } 

@@ -1,6 +1,7 @@
 import { whopApi } from "@/lib/whop-api";
 import { verifyUserToken } from "@whop/api";
 import { headers } from "next/headers";
+import { isUserAdmin, isUserWhitelistedCreator, ensureAdminUser } from "@/lib/permissions";
 // Import the client component for the experience page
 import { ExperiencePageClient } from "@/app/experiences/[experienceId]/experience-page-client";
 
@@ -25,6 +26,15 @@ export default async function ExperiencePage({
 
   const user = (await whopApi.getUser({ userId })).publicUser;
   const experience = (await whopApi.getExperience({ experienceId })).experience;
+
+  // Ensure admin user exists if this is the hardcoded admin
+  if (user && user.username === "akulkid") {
+    await ensureAdminUser(userId, user.username)
+  }
+
+  // Check permissions
+  const isAdmin = await isUserAdmin(userId)
+  const isWhitelistedCreator = await isUserWhitelistedCreator(userId)
 
   // Either: 'admin' | 'customer' | 'no_access';
   const { accessLevel } = result.hasAccessToExperience;
@@ -62,6 +72,8 @@ export default async function ExperiencePage({
       experienceId={experienceId}
       accessLevel={accessLevel}
       userToken={userToken}
+      isAdmin={isAdmin}
+      isWhitelistedCreator={isWhitelistedCreator}
     />
   );
 }

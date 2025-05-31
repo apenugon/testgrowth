@@ -14,7 +14,8 @@ import {
   ChevronLeft,
   Menu,
   Settings,
-  ShoppingBag
+  ShoppingBag,
+  Shield
 } from "lucide-react"
 import { useState } from "react"
 
@@ -28,6 +29,8 @@ interface HeaderProps {
   backHref?: string
   backLabel?: string
   isCreatorMode?: boolean
+  isAdmin?: boolean
+  isWhitelistedCreator?: boolean
 }
 
 export function Header({ 
@@ -36,7 +39,9 @@ export function Header({
   showBackButton = false, 
   backHref, 
   backLabel = "Back",
-  isCreatorMode = false
+  isCreatorMode = false,
+  isAdmin = false,
+  isWhitelistedCreator = false
 }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
@@ -98,12 +103,26 @@ export function Header({
                           Shopify Connections
                         </Link>
                       </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href={isCreatorMode ? `/experiences/${experienceId}` : `/experiences/${experienceId}/dashboard`}>
-                          <Settings className="w-4 h-4 mr-2" />
-                          {isCreatorMode ? 'Switch to competitor mode' : 'Switch to creator mode'}
-                        </Link>
-                      </DropdownMenuItem>
+                      
+                      {/* Admin Options */}
+                      {isAdmin && (
+                        <DropdownMenuItem asChild>
+                          <Link href={`/experiences/${experienceId}/admin/whitelist`}>
+                            <Shield className="w-4 h-4 mr-2" />
+                            Modify Whitelist
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                      
+                      {/* Creator Mode Toggle - Only show if whitelisted */}
+                      {isWhitelistedCreator && (
+                        <DropdownMenuItem asChild>
+                          <Link href={isCreatorMode ? `/experiences/${experienceId}` : `/experiences/${experienceId}/dashboard`}>
+                            <Settings className="w-4 h-4 mr-2" />
+                            {isCreatorMode ? 'Switch to competitor mode' : 'Switch to creator mode'}
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
                     </>
                   )}
                 </DropdownMenuContent>

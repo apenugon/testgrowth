@@ -3,10 +3,10 @@ import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { whopApi } from "@/lib/whop-api"
 import { Header } from "@/components/layout/header"
-import { DashboardClient } from "./dashboard-client"
-import { isUserAdmin, isUserWhitelistedCreator, ensureAdminUser } from "@/lib/permissions"
+import { isUserAdmin, ensureAdminUser } from "@/lib/permissions"
+import { WhitelistManagementClient } from "./whitelist-client"
 
-export default async function CreatorDashboardPage({
+export default async function AdminWhitelistPage({
   params,
 }: {
   params: Promise<{ experienceId: string }>;
@@ -32,7 +32,7 @@ export default async function CreatorDashboardPage({
     redirect(`/experiences/${experienceId}`)
   }
 
-  // Get user info for header
+  // Get user info for header and admin check
   let user = null
   try {
     const whopUser = await whopApi.getUser({ userId })
@@ -52,12 +52,9 @@ export default async function CreatorDashboardPage({
     console.error("Error fetching user data:", error)
   }
 
-  // Check permissions
+  // Check if user is admin
   const isAdmin = await isUserAdmin(userId)
-  const isWhitelistedCreator = await isUserWhitelistedCreator(userId)
-  
-  // Redirect if not whitelisted as creator
-  if (!isWhitelistedCreator) {
+  if (!isAdmin) {
     redirect(`/experiences/${experienceId}`)
   }
 
@@ -67,14 +64,25 @@ export default async function CreatorDashboardPage({
         user={user || undefined}
         experienceId={experienceId}
         showBackButton={true}
-        backHref={`/experiences/${experienceId}`}
-        backLabel="Back"
+        backHref={`/experiences/${experienceId}/dashboard`}
+        backLabel="Back to Dashboard"
         isCreatorMode={true}
-        isAdmin={isAdmin}
-        isWhitelistedCreator={isWhitelistedCreator}
       />
       
-      <DashboardClient userId={userId} experienceId={experienceId} />
+      <div className="py-8 px-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Creator Whitelist Management
+            </h1>
+            <p className="text-gray-600">
+              Manage which users can access creator features and create contests
+            </p>
+          </div>
+
+          <WhitelistManagementClient experienceId={experienceId} />
+        </div>
+      </div>
     </div>
   )
 } 
