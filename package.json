@@ -10,7 +10,8 @@
     "prisma:db:push": "dotenv -e .env.local -- pnpm prisma db push",
     "prisma:generate": "dotenv -e .env.local -- pnpm prisma generate",
     "prisma:migrate:dev": "dotenv -e .env.local -- pnpm prisma migrate dev",
-    "prisma:studio": "dotenv -e .env.local -- pnpm prisma studio"
+    "prisma:studio": "dotenv -e .env.local -- pnpm prisma studio",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@google-cloud/pubsub": "^5.0.0",
