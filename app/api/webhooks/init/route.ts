@@ -8,11 +8,12 @@ export async function GET(request: NextRequest) {
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+	 return;
 
     // Check environment variables
     const envCheck = {
       GOOGLE_CLOUD_PROJECT_ID: !!process.env.GOOGLE_CLOUD_PROJECT_ID,
-      GOOGLE_APPLICATION_CREDENTIALS: !!process.env.GOOGLE_APPLICATION_CREDENTIALS,
+    //  GOOGLE_APPLICATION_CREDENTIALS: !!process.env.GOOGLE_APPLICATION_CREDENTIALS,
       SHOPIFY_APP_API_KEY: !!process.env.SHOPIFY_APP_API_KEY,
       SHOPIFY_APP_SECRET: !!process.env.SHOPIFY_APP_SECRET,
     };
@@ -27,6 +28,7 @@ export async function GET(request: NextRequest) {
         credentialsValid = false;
       }
     }
+	 return;
 
     return NextResponse.json({
       status: "Webhook system running",
