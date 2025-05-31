@@ -6,7 +6,7 @@ import { webhookManager } from './webhook-manager';
  */
 export async function initWebhooks(): Promise<void> {
   console.log('🚀 Starting webhook system...');
-  
+  return;
   try {
     // Start Pub/Sub subscriptions (this should always be running)
     await webhookManager.startSubscribing();
