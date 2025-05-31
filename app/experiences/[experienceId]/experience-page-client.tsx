@@ -54,7 +54,7 @@ export function ExperiencePageClient({
 }: ExperiencePageClientProps) {
   const [allContests, setAllContests] = useState<Contest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState<'upcoming' | 'live' | 'ended'>('live');
+  const [activeFilter, setActiveFilter] = useState<'upcoming' | 'live' | 'ended'>('upcoming');
 
   // Determine the best default filter based on available contests
   useEffect(() => {
@@ -67,11 +67,11 @@ export function ExperiencePageClient({
 
       console.log('Contests by status:', contestsByStatus); // Debug log
 
-      // Set the best default filter
-      if (contestsByStatus.live.length > 0) {
-        setActiveFilter('live');
-      } else if (contestsByStatus.upcoming.length > 0) {
+      // Set the best default filter - prioritize upcoming first
+      if (contestsByStatus.upcoming.length > 0) {
         setActiveFilter('upcoming');
+      } else if (contestsByStatus.live.length > 0) {
+        setActiveFilter('live');
       } else if (contestsByStatus.ended.length > 0) {
         setActiveFilter('ended');
       }
@@ -169,16 +169,6 @@ export function ExperiencePageClient({
           <p className="text-lg text-gray-600 mb-6">
             Join competitive challenges and win prizes by growing your Shopify sales
           </p>
-          
-          {/* Creator Button - Secondary */}
-          <div className="flex justify-center mb-8">
-            <Button variant="outline" size="sm" asChild>
-              <Link href={`/experiences/${experienceId}/dashboard`}>
-                <Settings className="w-4 h-4 mr-2" />
-                Creator Dashboard
-              </Link>
-            </Button>
-          </div>
         </div>
 
         {/* Filter Tabs */}

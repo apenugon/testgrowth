@@ -57,7 +57,7 @@ export default async function CreatorDashboardPage({
         experienceId={experienceId}
         showBackButton={true}
         backHref={`/experiences/${experienceId}`}
-        backLabel="Back to Contests"
+        backLabel="Back"
       />
       
       <div className="py-8 px-4">
@@ -141,14 +141,9 @@ export default async function CreatorDashboardPage({
 
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Your Contests */}
-            <div className="lg:col-span-2">
-              <div className="flex items-center justify-between mb-6">
+            <div className="lg:col-span-3">
+              <div className="mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">Your Contests</h2>
-                <Button variant="outline" asChild>
-                  <Link href={`/experiences/${experienceId}/contests`}>
-                    View All Contests
-                  </Link>
-                </Button>
               </div>
 
               <Card>
@@ -164,68 +159,6 @@ export default async function CreatorDashboardPage({
                       Create Your First Contest
                     </Link>
                   </Button>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Quick Actions & Resources */}
-            <div className="space-y-6">
-              {/* Quick Actions */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Quick Actions</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Button className="w-full" asChild>
-                    <Link href={`/experiences/${experienceId}/create`}>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create Contest
-                    </Link>
-                  </Button>
-                  <Button variant="outline" className="w-full" asChild>
-                    <Link href={`/experiences/${experienceId}/contests`}>
-                      <Trophy className="w-4 h-4 mr-2" />
-                      Browse All Contests
-                    </Link>
-                  </Button>
-                  <Button variant="outline" className="w-full" asChild>
-                    <Link href={`/experiences/${experienceId}`}>
-                      <ArrowLeft className="w-4 h-4 mr-2" />
-                      Back to Contests
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Contest Tips */}
-              <Card className="bg-emerald-50 border-emerald-200">
-                <CardContent className="p-4">
-                  <h4 className="font-medium text-emerald-900 mb-2">
-                    💡 Contest Tips
-                  </h4>
-                  <ul className="text-sm text-emerald-800 space-y-1">
-                    <li>• Set clear, achievable goals</li>
-                    <li>• Offer attractive prizes</li>
-                    <li>• Promote across all channels</li>
-                    <li>• Provide regular updates</li>
-                    <li>• Celebrate all participants</li>
-                  </ul>
-                </CardContent>
-              </Card>
-
-              {/* Platform Status */}
-              <Card className="bg-blue-50 border-blue-200">
-                <CardContent className="p-4">
-                  <h4 className="font-medium text-blue-900 mb-2">
-                    🚀 Platform Features
-                  </h4>
-                  <ul className="text-sm text-blue-800 space-y-1">
-                    <li>✅ Contest Creation</li>
-                    <li>✅ Prize Pool Management</li>
-                    <li>✅ Real-time Tracking</li>
-                    <li>🚧 Shopify Integration</li>
-                    <li>🚧 Automated Payouts</li>
-                  </ul>
                 </CardContent>
               </Card>
             </div>
