@@ -395,7 +395,7 @@ export function ContestJoinButton({ contest, userId, isParticipating, experience
           <Button
             onClick={handleJoinClick}
             disabled={!joinStatus.canJoin || isJoining}
-            className="w-full"
+            className="w-full cursor-pointer"
             size="lg"
           >
             {isJoining ? (
@@ -432,7 +432,7 @@ export function ContestJoinButton({ contest, userId, isParticipating, experience
               variant="outline"
               size="sm"
               onClick={handleAddStore}
-              className="w-full"
+              className="w-full cursor-pointer"
             >
               <ShoppingBag className="w-4 h-4 mr-2" />
               Connect Shopify Store
@@ -447,7 +447,7 @@ export function ContestJoinButton({ contest, userId, isParticipating, experience
               variant="ghost"
               size="sm"
               onClick={handleAddStore}
-              className="w-full text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+              className="w-full text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 cursor-pointer"
             >
               <ShoppingBag className="w-4 h-4 mr-2" />
               Add Another Store

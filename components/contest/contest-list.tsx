@@ -431,22 +431,63 @@ export function ContestList({
                       {/* Right side: Participants and Action Button */}
                       <div className="flex flex-col items-end space-y-3">
                         {/* Action Button */}
-                        <div onClick={(e) => e.preventDefault()}>
+                        <div 
+                          className="cursor-pointer"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                          }}
+                        >
                           {activeFilter === 'my-contests' ? (
-                            <Button variant="outline" size="sm">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="cursor-pointer"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                // Navigate to contest page
+                                window.location.href = `/experiences/${experienceId}/contest/${contest.slug}`;
+                              }}
+                            >
                               <Eye className="w-4 h-4 mr-1" />
                               View
                             </Button>
                           ) : timeStatus === 'upcoming' ? (
-                            <Button>
+                            <Button
+                              className="cursor-pointer"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                // Navigate to contest page for joining
+                                window.location.href = `/experiences/${experienceId}/contest/${contest.slug}`;
+                              }}
+                            >
                               Join Contest
                             </Button>
                           ) : timeStatus === 'active' ? (
-                            <Button>
+                            <Button
+                              className="cursor-pointer"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                // Navigate to contest page
+                                window.location.href = `/experiences/${experienceId}/contest/${contest.slug}`;
+                              }}
+                            >
                               View Details
                             </Button>
                           ) : (
-                            <Button variant="outline">
+                            <Button 
+                              variant="outline"
+                              className="cursor-pointer"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                // Navigate to contest page
+                                window.location.href = `/experiences/${experienceId}/contest/${contest.slug}`;
+                              }}
+                            >
                               View Results
                             </Button>
                           )}

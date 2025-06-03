@@ -369,7 +369,7 @@ export function ContestPageHeader({
           ) : (
             <Button
               size="lg"
-              className="px-12 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all w-full"
+              className="px-12 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all w-full cursor-pointer"
               onClick={handleJoinClick}
               disabled={!isJoinable || checkingStores}
               variant={isParticipating ? "outline" : timeStatus === 'ended' ? "outline" : "default"}
@@ -385,7 +385,7 @@ export function ContestPageHeader({
         <div className="text-center py-4">
           <button
             onClick={handleWithdraw}
-            className="text-sm text-red-600 hover:text-red-700 underline transition-colors"
+            className="text-sm text-red-600 hover:text-red-700 underline transition-colors cursor-pointer"
           >
             Withdraw
           </button>
@@ -436,7 +436,7 @@ export function ContestPageHeader({
             <Button
               onClick={handleJoin}
               disabled={isJoining || (stores.length > 1 && !selectedStoreId)}
-              className="w-full"
+              className="w-full cursor-pointer"
               size="lg"
             >
               {isJoining ? (
@@ -454,7 +454,7 @@ export function ContestPageHeader({
               variant="outline"
               size="sm"
               onClick={handleAddStore}
-              className="w-full"
+              className="w-full cursor-pointer"
             >
               <ShoppingBag className="w-4 h-4 mr-2" />
               Connect Different Store
