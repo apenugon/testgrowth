@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
@@ -44,6 +45,7 @@ export function Header({
   isWhitelistedCreator = false
 }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const router = useRouter()
 
   const homeHref = experienceId ? `/experiences/${experienceId}` : "/"
 
@@ -116,11 +118,21 @@ export function Header({
                       
                       {/* Creator Mode Toggle - Only show if whitelisted */}
                       {isWhitelistedCreator && (
-                        <DropdownMenuItem asChild>
-                          <Link href={isCreatorMode ? `/experiences/${experienceId}` : `/experiences/${experienceId}/dashboard`}>
-                            <Settings className="w-4 h-4 mr-2" />
-                            {isCreatorMode ? 'Switch to competitor mode' : 'Switch to creator mode'}
-                          </Link>
+                        <DropdownMenuItem 
+                          onClick={() => {
+                            const currentUrl = new URL(window.location.href);
+                            if (isCreatorMode) {
+                              // Switch to competitor mode - remove mode parameter
+                              currentUrl.searchParams.delete('mode');
+                            } else {
+                              // Switch to creator mode - add mode parameter
+                              currentUrl.searchParams.set('mode', 'creator');
+                            }
+                            router.push(currentUrl.toString());
+                          }}
+                        >
+                          <Settings className="w-4 h-4 mr-2" />
+                          {isCreatorMode ? 'Switch to competitor mode' : 'Switch to creator mode'}
                         </DropdownMenuItem>
                       )}
                     </>

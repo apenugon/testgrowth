@@ -64,7 +64,7 @@ export default async function AdminWhitelistPage({
         user={user || undefined}
         experienceId={experienceId}
         showBackButton={true}
-        backHref={`/experiences/${experienceId}/dashboard`}
+        backHref={`/experiences/${experienceId}?mode=creator`}
         backLabel="Back to Dashboard"
         isCreatorMode={true}
       />

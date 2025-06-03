@@ -2,6 +2,8 @@
 
 import { Header } from "@/components/layout/header";
 import { ContestList } from "@/components/contest/contest-list";
+import { useSearchParams } from "next/navigation";
+import { useMemo } from "react";
 
 interface ExperiencePageClientProps {
   userId: string | null;
@@ -24,21 +26,29 @@ export function ExperiencePageClient({
   isAdmin,
   isWhitelistedCreator,
 }: ExperiencePageClientProps) {
+  const searchParams = useSearchParams();
+  
+  // Check if we're in creator mode based on URL parameter
+  const isCreatorMode = useMemo(() => {
+    return searchParams.get('mode') === 'creator' && isWhitelistedCreator;
+  }, [searchParams, isWhitelistedCreator]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50">
       <Header 
-        user={user}
+        user={user || undefined}
         experienceId={experienceId}
         isAdmin={isAdmin}
         isWhitelistedCreator={isWhitelistedCreator}
+        isCreatorMode={isCreatorMode}
       />
       
       <ContestList 
         experienceId={experienceId}
         userId={userId || undefined}
         userToken={userToken}
-        showMyContests={false}
-        isCreator={isWhitelistedCreator}
+        showMyContests={isCreatorMode}
+        isCreator={isWhitelistedCreator && isCreatorMode}
       />
     </div>
   );

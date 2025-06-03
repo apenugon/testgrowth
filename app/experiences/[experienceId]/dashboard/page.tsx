@@ -2,8 +2,6 @@ import { verifyUserToken } from "@whop/api"
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { whopApi } from "@/lib/whop-api"
-import { Header } from "@/components/layout/header"
-import { DashboardClient } from "./dashboard-client"
 import { isUserAdmin, isUserWhitelistedCreator, ensureAdminUser } from "@/lib/permissions"
 
 export default async function CreatorDashboardPage({
@@ -61,20 +59,6 @@ export default async function CreatorDashboardPage({
     redirect(`/experiences/${experienceId}`)
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50">
-      <Header 
-        user={user || undefined}
-        experienceId={experienceId}
-        showBackButton={true}
-        backHref={`/experiences/${experienceId}`}
-        backLabel="Back"
-        isCreatorMode={true}
-        isAdmin={isAdmin}
-        isWhitelistedCreator={isWhitelistedCreator}
-      />
-      
-      <DashboardClient userId={userId} experienceId={experienceId} />
-    </div>
-  )
+  // Redirect to main experience page with creator mode
+  redirect(`/experiences/${experienceId}?mode=creator`)
 } 
