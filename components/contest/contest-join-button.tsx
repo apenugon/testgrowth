@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Users, DollarSign, CheckCircle, Clock, Lock, ShoppingBag, ChevronDown } from "lucide-react"
+import { Users, DollarSign, CheckCircle, Clock, Lock, ShoppingBag, ChevronDown, PlayCircle } from "lucide-react"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import {
   Select,
@@ -213,16 +213,6 @@ export function ContestJoinButton({ contest, userId, isParticipating, experience
       }
     }
 
-    // Check if contest has already started - REQUIREMENT 1
-    if (hasStarted) {
-      return {
-        canJoin: false,
-        reason: "Contest has already started",
-        icon: <Clock className="w-4 h-4" />,
-        requiresShopify: false
-      }
-    }
-
     if (isFull) {
       return {
         canJoin: false,
@@ -250,10 +240,21 @@ export function ContestJoinButton({ contest, userId, isParticipating, experience
       }
     }
 
+    // New logic: Allow joining upcoming and live competitions
+    if (!hasStarted) {
+      return {
+        canJoin: true,
+        reason: `Starts ${formatDate(new Date(contest.startAt))}`,
+        icon: <Clock className="w-4 h-4" />,
+        requiresShopify: false
+      }
+    }
+
+    // Competition is live - can still join
     return {
       canJoin: true,
-      reason: `Starts ${formatDate(new Date(contest.startAt))}`,
-      icon: <Clock className="w-4 h-4" />,
+      reason: "Join live competition",
+      icon: <PlayCircle className="w-4 h-4" />,
       requiresShopify: false
     }
   }

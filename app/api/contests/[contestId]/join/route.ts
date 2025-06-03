@@ -46,11 +46,11 @@ export async function POST(
       return NextResponse.json({ error: 'Contest not found' }, { status: 404 })
     }
 
-    // Check if contest hasn't started yet (requirement 1)
+    // Check if contest has ended (new logic: allow joining until contest ends)
     const now = new Date()
-    if (now >= contest.startAt) {
+    if (now >= contest.endAt) {
       return NextResponse.json({ 
-        error: 'Cannot join contest that has already started' 
+        error: 'Cannot join contest that has already ended' 
       }, { status: 400 })
     }
 
@@ -106,7 +106,7 @@ export async function POST(
       }, { status: 400 })
     }
 
-    // Join the contest
+    // Join the contest with current timestamp as joinedAt
     const participant = await joinContest({
       contestId,
       userId,

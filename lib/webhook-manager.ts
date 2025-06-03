@@ -1,11 +1,48 @@
 import { PubSub, Message } from '@google-cloud/pubsub';
 import { prisma } from './prisma';
 import { createShopifyClient, createWebhook, deleteWebhook } from './shopify';
+import fs from 'fs';
 
-// Initialize Google Pub/Sub client
-//const pubsub = new PubSub({
-//  projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
-//});
+// Check if Google Cloud is properly configured
+function isGoogleCloudConfigured(): boolean {
+  // Only enable in production with proper credentials
+  if (process.env.NODE_ENV !== 'production') {
+    return false;
+  }
+  
+  // Check if we have the required environment variables
+  if (!process.env.GOOGLE_CLOUD_PROJECT_ID) {
+    return false;
+  }
+  
+  // Check if service key file exists (if GOOGLE_APPLICATION_CREDENTIALS is set)
+  if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    try {
+      return fs.existsSync(process.env.GOOGLE_APPLICATION_CREDENTIALS);
+    } catch {
+      return false;
+    }
+  }
+  
+  // If no explicit credentials file, assume it's configured via other means (like GCP environment)
+  return true;
+}
+
+// Initialize Google Pub/Sub client only if properly configured
+let pubsub: PubSub | null = null;
+
+function getPubSubClient(): PubSub | null {
+  if (!isGoogleCloudConfigured()) {
+    return null;
+  }
+  
+  if (!pubsub) {
+    pubsub = new PubSub({
+      projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
+    });
+  }
+  return pubsub;
+}
 
 // Pub/Sub topic names for different webhook types
 const PUBSUB_TOPICS = {
@@ -29,18 +66,27 @@ export class ShopifyWebhookManager implements ContestWebhookManager {
   private subscriptions: Map<string, any> = new Map();
 
   constructor() {
-    // Ensure Pub/Sub topics exist
-    this.ensureTopicsExist();
+    // Only ensure topics exist if Google Cloud is properly configured
+    if (isGoogleCloudConfigured()) {
+      this.ensureTopicsExist();
+    } else {
+      console.log('Google Cloud not configured - skipping webhook setup');
+    }
   }
 
   /**
    * Ensure all required Pub/Sub topics exist
    */
   private async ensureTopicsExist(): Promise<void> {
+    const client = getPubSubClient();
+    if (!client) {
+      console.log('Skipping Pub/Sub topic creation - Google Cloud not configured');
+      return;
+    }
+
     for (const topicName of Object.values(PUBSUB_TOPICS)) {
       try {
-			return;
-        const topic = pubsub.topic(topicName);
+        const topic = client.topic(topicName);
         const [exists] = await topic.exists();
         
         if (!exists) {
@@ -85,7 +131,7 @@ export class ShopifyWebhookManager implements ContestWebhookManager {
    */
   private async setupWebhooksForStore(contestId: string, store: any): Promise<void> {
     console.log(`Setting up webhooks for store ${store.shopDomain} in contest ${contestId}`);
-
+	 return;
     for (const topic of WEBHOOK_TOPICS) {
       try {
         // Check if webhook subscription already exists
@@ -99,7 +145,7 @@ export class ShopifyWebhookManager implements ContestWebhookManager {
           },
         });
 
-        if (existingSubscription && existingSubscription.isActive) {
+        if (existingSubscription?.isActive) {
           console.log(`Webhook already exists for ${store.shopDomain} - ${topic}`);
           continue;
         }
@@ -150,7 +196,7 @@ export class ShopifyWebhookManager implements ContestWebhookManager {
    */
   async removeWebhooksForContest(contestId: string): Promise<void> {
     console.log(`Removing webhooks for contest ${contestId}`);
-
+	 return;
     const subscriptions = await prisma.webhookSubscription.findMany({
       where: { contestId },
       include: { store: true },
@@ -183,11 +229,18 @@ export class ShopifyWebhookManager implements ContestWebhookManager {
    */
   async startSubscribing(): Promise<void> {
     console.log('Starting Pub/Sub subscriptions for webhook processing');
+    
+    const client = getPubSubClient();
+    if (!client) {
+      console.log('Skipping Pub/Sub subscriptions - Google Cloud not configured');
+      return;
+    }
 
+    return; // Comment this out when ready to enable in production
+    
     for (const [webhookTopic, topicName] of Object.entries(PUBSUB_TOPICS)) {
       try {
-		return;
-        const topic = pubsub.topic(topicName);
+        const topic = client!.topic(topicName); // Non-null assertion since we checked above
         const subscriptionName = `projects/growtharena/subscriptions/shopify-sub`;
         const [subscription] = await topic.subscription(subscriptionName).get({ autoCreate: true });
 
@@ -230,7 +283,8 @@ export class ShopifyWebhookManager implements ContestWebhookManager {
    * Handle incoming Pub/Sub message
    */
   private async handlePubSubMessage(message: Message, eventType: WebhookTopic): Promise<void> {
-    try {
+   return; 
+	try {
       // Parse the Shopify webhook data
       const webhookData = JSON.parse(message.data.toString());
       
@@ -346,6 +400,12 @@ export class ShopifyWebhookManager implements ContestWebhookManager {
         continue; // Skip orders outside contest timeframe
       }
 
+      // NEW: Only count orders after the participant joined the contest
+      if (orderDate < participant.joinedAt) {
+        console.log(`Skipping order from ${orderDate} for contest ${contest.id} - participant joined at ${participant.joinedAt}`);
+        continue; // Skip orders from before the participant joined
+      }
+
       // Update contest-store balance
       await prisma.contestStoreBalance.update({
         where: {
@@ -409,8 +469,9 @@ export async function getContestBalances(contestId: string) {
 
 /**
  * Get detailed order events for a store in a contest
+ * Optionally filter by participant's join date if userId is provided
  */
-export async function getStoreOrderEvents(storeId: string, contestId?: string) {
+export async function getStoreOrderEvents(storeId: string, contestId?: string, userId?: string) {
   const where: any = { storeId };
   
   if (contestId) {
@@ -425,6 +486,29 @@ export async function getStoreOrderEvents(storeId: string, contestId?: string) {
         gte: contest.startAt,
         lte: contest.endAt,
       };
+
+      // If userId is provided, only show events after they joined
+      if (userId) {
+        const participant = await prisma.contestParticipant.findUnique({
+          where: {
+            contestId_userId: {
+              contestId,
+              userId,
+            },
+          },
+          select: { joinedAt: true },
+        });
+
+        if (participant) {
+          // Use the later of contest start or join date
+          const effectiveStartDate = new Date(Math.max(
+            contest.startAt.getTime(),
+            participant.joinedAt.getTime()
+          ));
+          
+          where.processedAt.gte = effectiveStartDate;
+        }
+      }
     }
   }
 
@@ -432,6 +516,105 @@ export async function getStoreOrderEvents(storeId: string, contestId?: string) {
     where,
     orderBy: { processedAt: 'desc' },
   });
+}
+
+/**
+ * Recalculate balances for a specific participant based on their join date
+ * This is useful for ensuring data integrity after the join date logic change
+ */
+export async function recalculateParticipantBalances(contestId: string, userId: string): Promise<void> {
+  console.log(`Recalculating balances for participant ${userId} in contest ${contestId}`);
+
+  // Get participant data
+  const participant = await prisma.contestParticipant.findUnique({
+    where: {
+      contestId_userId: {
+        contestId,
+        userId,
+      },
+    },
+    include: {
+      contest: true,
+      store: true,
+    },
+  });
+
+  if (!participant) {
+    throw new Error('Participant not found');
+  }
+
+  // Get all order events for this store within the contest timeframe and after join date
+  const orderEvents = await prisma.orderEvent.findMany({
+    where: {
+      storeId: participant.storeId,
+      processedAt: {
+        gte: participant.joinedAt, // Only orders after they joined
+        lte: participant.contest.endAt, // And before contest ended
+      },
+    },
+  });
+
+  // Calculate totals
+  let totalSales = 0;
+  let orderCount = 0;
+
+  for (const event of orderEvents) {
+    // Only count events within contest timeframe
+    if (event.processedAt >= participant.contest.startAt && event.processedAt <= participant.contest.endAt) {
+      totalSales += event.amount;
+      if (event.eventType === 'orders_paid' || event.eventType === 'orders_create') {
+        orderCount += 1;
+      }
+    }
+  }
+
+  // Update participant totals
+  await prisma.contestParticipant.update({
+    where: {
+      contestId_userId: {
+        contestId,
+        userId,
+      },
+    },
+    data: {
+      totalSales,
+      orderCount,
+    },
+  });
+
+  // Update contest store balance
+  await prisma.contestStoreBalance.update({
+    where: {
+      contestId_storeId: {
+        contestId: participant.storeId,
+        storeId: participant.storeId,
+      },
+    },
+    data: {
+      totalSales,
+      orderCount,
+    },
+  });
+
+  console.log(`Recalculated balances for participant ${userId}: ${totalSales} cents, ${orderCount} orders`);
+}
+
+/**
+ * Recalculate balances for all participants in a contest
+ * This ensures all data reflects the "only count sales after join date" logic
+ */
+export async function recalculateAllContestBalances(contestId: string): Promise<void> {
+  console.log(`Recalculating all balances for contest ${contestId}`);
+
+  const participants = await prisma.contestParticipant.findMany({
+    where: { contestId },
+  });
+
+  for (const participant of participants) {
+    await recalculateParticipantBalances(contestId, participant.userId);
+  }
+
+  console.log(`Finished recalculating balances for ${participants.length} participants`);
 }
 
 // Export singleton instance
