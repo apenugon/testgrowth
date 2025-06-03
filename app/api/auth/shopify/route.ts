@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     const scopes = process.env.SHOPIFY_APP_SCOPES || 'read_orders'
     
     // Ensure proper URL format for redirect URI
-    let baseUrl = process.env.VERCEL_URL || 'http://localhost:3000'
+    let baseUrl = process.env.APP_URL || 'http://localhost:3000'
     if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
       baseUrl = `http://${baseUrl}`
     }
