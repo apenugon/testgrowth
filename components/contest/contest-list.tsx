@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Users, Clock, DollarSign, Target, Calendar, Eye, Plus } from "lucide-react";
+import { Trophy, Users, Clock, DollarSign, Target, Calendar, Eye, Plus, List } from "lucide-react";
 import { formatCurrency, formatDate, getContestStatusBadge, getContestTimeStatus } from "@/lib/utils";
 
 type Contest = {
@@ -36,6 +37,50 @@ interface ContestListProps {
   isCreator?: boolean; // Whether the current user is a creator
 }
 
+// Countdown Timer Component
+function CountdownTimer({ targetDate }: { targetDate: Date | string }) {
+  const [timeLeft, setTimeLeft] = useState<string>('');
+
+  useEffect(() => {
+    const updateCountdown = () => {
+      const now = new Date();
+      const target = new Date(targetDate);
+      const timeDiff = target.getTime() - now.getTime();
+
+      if (timeDiff <= 0) {
+        setTimeLeft('Starting soon');
+        return;
+      }
+
+      const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+
+      if (days > 0) {
+        setTimeLeft(`${days}d ${hours}h ${minutes}m`);
+      } else if (hours > 0) {
+        setTimeLeft(`${hours}h ${minutes}m`);
+      } else if (minutes > 0) {
+        setTimeLeft(`${minutes}m`);
+      } else {
+        setTimeLeft('Starting soon');
+      }
+    };
+
+    updateCountdown(); // Initial call
+    const interval = setInterval(updateCountdown, 1000 * 60); // Update every minute
+
+    return () => clearInterval(interval);
+  }, [targetDate]);
+
+  return (
+    <div className="flex items-center space-x-2 text-sm text-blue-600">
+      <Clock className="w-4 h-4" />
+      <span>Starting in {timeLeft}</span>
+    </div>
+  );
+}
+
 export function ContestList({ 
   experienceId, 
   userId, 
@@ -46,26 +91,62 @@ export function ContestList({
   const [allContests, setAllContests] = useState<Contest[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<FilterType>('upcoming');
+  const searchParams = useSearchParams();
+  const shouldShowList = searchParams.get('view') === 'list';
 
   // Determine the best default filter based on available contests
   useEffect(() => {
-    if (allContests.length > 0) {
-      const contestsByStatus = {
-        live: allContests.filter(c => getContestTimeStatus(c.startAt, c.endAt) === 'active'),
-        upcoming: allContests.filter(c => getContestTimeStatus(c.startAt, c.endAt) === 'upcoming'),
-        ended: allContests.filter(c => getContestTimeStatus(c.startAt, c.endAt) === 'ended'),
-      };
+    if (allContests.length > 0 && !shouldShowList) {
+      const now = new Date();
+      
+      // Group contests by status
+      const upcomingContests = allContests.filter(c => getContestTimeStatus(c.startAt, c.endAt) === 'upcoming');
+      const liveContests = allContests.filter(c => getContestTimeStatus(c.startAt, c.endAt) === 'active');
+      const endedContests = allContests.filter(c => getContestTimeStatus(c.startAt, c.endAt) === 'ended');
 
-      // Set the best default filter - prioritize upcoming first
-      if (contestsByStatus.upcoming.length > 0) {
+      let targetContest = null;
+
+      // Priority 1: The soonest upcoming competition
+      if (upcomingContests.length > 0) {
+        targetContest = upcomingContests.sort((a, b) => 
+          new Date(a.startAt).getTime() - new Date(b.startAt).getTime()
+        )[0];
+      } 
+      // Priority 2: If no upcoming competitions, the live competition with the most time left
+      else if (liveContests.length > 0) {
+        targetContest = liveContests.sort((a, b) => 
+          new Date(b.endAt).getTime() - new Date(a.endAt).getTime()
+        )[0];
+      } 
+      // Priority 3: If no live competitions, then show the competition list filtered to ended
+      else if (endedContests.length > 0) {
+        setActiveFilter('ended');
+        return;
+      }
+
+      // If we found a target competition, redirect to it
+      if (targetContest) {
+        window.location.href = `/experiences/${experienceId}/contest/${targetContest.slug}`;
+        return;
+      }
+
+      // Fallback to upcoming filter if no contests found
+      setActiveFilter('upcoming');
+    } else if (allContests.length > 0) {
+      // If shouldShowList is true, set appropriate default filter
+      const upcomingContests = allContests.filter(c => getContestTimeStatus(c.startAt, c.endAt) === 'upcoming');
+      const liveContests = allContests.filter(c => getContestTimeStatus(c.startAt, c.endAt) === 'active');
+      const endedContests = allContests.filter(c => getContestTimeStatus(c.startAt, c.endAt) === 'ended');
+
+      if (upcomingContests.length > 0) {
         setActiveFilter('upcoming');
-      } else if (contestsByStatus.live.length > 0) {
+      } else if (liveContests.length > 0) {
         setActiveFilter('live');
-      } else if (contestsByStatus.ended.length > 0) {
+      } else if (endedContests.length > 0) {
         setActiveFilter('ended');
       }
     }
-  }, [allContests]);
+  }, [allContests, experienceId, shouldShowList]);
 
   useEffect(() => {
     const fetchContests = async () => {
@@ -152,7 +233,7 @@ export function ContestList({
       });
     }
     
-    // For other filters, filter by time status
+    // Filter by time status and apply specific sorting for each type
     const timeStatus = getContestTimeStatus;
     const statusMapping = {
       'live': 'active',
@@ -160,9 +241,23 @@ export function ContestList({
       'ended': 'ended'
     };
     
-    return contests.filter(contest => {
+    const filtered = contests.filter(contest => {
       return timeStatus(contest.startAt, contest.endAt) === statusMapping[activeFilter];
     });
+
+    // Apply sorting based on filter type
+    if (activeFilter === 'upcoming') {
+      // Sort by soonest start date (earliest first)
+      return filtered.sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+    } else if (activeFilter === 'live') {
+      // Sort by most time remaining (latest end date first)
+      return filtered.sort((a, b) => new Date(b.endAt).getTime() - new Date(a.endAt).getTime());
+    } else if (activeFilter === 'ended') {
+      // Sort by most recent end date (latest ended first)
+      return filtered.sort((a, b) => new Date(b.endAt).getTime() - new Date(a.endAt).getTime());
+    }
+    
+    return filtered;
   })();
 
   // Calculate counts for each filter
@@ -324,6 +419,13 @@ export function ContestList({
                             </div>
                           )}
                         </div>
+
+                        {/* Countdown Timer for Upcoming Contests */}
+                        {timeStatus === 'upcoming' && (
+                          <div className="mt-2">
+                            <CountdownTimer targetDate={contest.startAt} />
+                          </div>
+                        )}
                       </div>
 
                       {/* Right side: Participants and Action Button */}

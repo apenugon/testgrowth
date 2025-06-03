@@ -122,11 +122,11 @@ export default async function ContestPage({ params }: ContestPageProps) {
 
   // Determine the appropriate back navigation
   const backHref = experienceId 
-    ? `/experiences/${experienceId}/contests`
-    : "/"
+    ? `/experiences/${experienceId}?view=list`
+    : "/?view=list"
   const backLabel = experienceId 
     ? "Back to Contests"
-    : "Back to Home"
+    : "Back to Contests"
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50">

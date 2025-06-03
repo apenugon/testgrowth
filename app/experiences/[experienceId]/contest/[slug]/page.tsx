@@ -137,7 +137,7 @@ export default async function ContestPage({ params }: ContestPageProps) {
         user={user || undefined}
         experienceId={experienceId}
         showBackButton={true}
-        backHref={`/experiences/${experienceId}`}
+        backHref={`/experiences/${experienceId}?view=list`}
         backLabel="Back to Contests"
       />
       
