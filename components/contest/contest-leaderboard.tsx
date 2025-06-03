@@ -68,7 +68,7 @@ export function ContestLeaderboard({ contest, participants, currentUserId }: Con
       default:
         return (
           <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-xs font-medium text-gray-600">
-            {rank}
+            
           </div>
         )
     }
