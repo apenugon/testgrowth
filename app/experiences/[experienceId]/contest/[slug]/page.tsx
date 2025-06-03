@@ -115,6 +115,42 @@ export default async function ContestPage({ params }: ContestPageProps) {
     }
   }))
 
+  // Auto-fix any users with wrong usernames (user-{whopUserId} pattern)
+  const fixWrongUsernames = async () => {
+    try {
+      for (const participant of contest.participants) {
+        const user = participant.user;
+        if (user.username === `user-${user.whopUserId}`) {
+          try {
+            // Fetch real username from Whop
+            const whopUser = await whopApi.getUser({ userId: user.whopUserId });
+            const publicUser = whopUser.publicUser;
+            
+            if (publicUser && publicUser.username && publicUser.username !== user.username) {
+              // Update the user with correct username and name
+              await prisma.user.update({
+                where: { id: user.id },
+                data: {
+                  username: publicUser.username,
+                  name: publicUser.name || undefined
+                }
+              });
+              
+              console.log(`Auto-fixed user ${user.whopUserId}: ${user.username} -> ${publicUser.username}`);
+            }
+          } catch (error) {
+            console.error(`Error auto-fixing user ${user.whopUserId}:`, error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error in auto-fix usernames:", error);
+    }
+  };
+
+  // Run the fix in the background (don't await to avoid blocking page render)
+  fixWrongUsernames().catch(console.error);
+
   const contestForJoinButton = {
     ...contest,
     slug: contest.slug,

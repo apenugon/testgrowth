@@ -151,22 +151,9 @@ export function ContestList({
   useEffect(() => {
     const fetchContests = async () => {
       try {
-        // Initialize user in database if userId exists
-        if (userId && userToken) {
-          await fetch('/api/users', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-whop-user-token': userToken,
-            },
-            body: JSON.stringify({
-              id: userId,
-              email: `user-${userId}@whop.user`,
-              username: `user-${userId}`,
-            }),
-          });
-        }
-
+        // Don't initialize users here - let proper user creation happen 
+        // when they actually interact with contests to avoid wrong usernames
+        
         let response;
         
         if (showMyContests && userId) {
