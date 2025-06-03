@@ -79,12 +79,8 @@ export class ShopifyWebhookManager implements ContestWebhookManager {
   private subscriptions: Map<string, any> = new Map();
 
   constructor() {
-    // Only ensure topics exist if Google Cloud is properly configured
-    if (isGoogleCloudConfigured()) {
-      this.ensureTopicsExist();
-    } else {
-      console.log('Google Cloud not configured - skipping webhook setup');
-    }
+    // Don't create topics in constructor - do it lazily when needed
+    console.log('ShopifyWebhookManager initialized');
   }
 
   /**
@@ -145,6 +141,15 @@ export class ShopifyWebhookManager implements ContestWebhookManager {
   private async setupWebhooksForStore(contestId: string, store: any): Promise<void> {
     console.log(`Setting up webhooks for store ${store.shopDomain} in contest ${contestId}`);
 	 return;
+
+    // Ensure topics exist before creating webhooks
+    try {
+      await this.ensureTopicsExist();
+    } catch (error) {
+      console.error('Failed to ensure Pub/Sub topics exist:', error);
+      return; // Skip webhook setup if topics can't be created
+    }
+
     for (const topic of WEBHOOK_TOPICS) {
       try {
         // Check if webhook subscription already exists
@@ -321,8 +326,8 @@ export class ShopifyWebhookManager implements ContestWebhookManager {
         return;
       }
 
-      // Process the webhook
-      await this.processOrderWebhook(store.id, webhookData, eventType);
+      // Process the webhook (store is guaranteed to be non-null here)
+      await this.processOrderWebhook(store!.id, webhookData, eventType);
       
       // Acknowledge the message
       message.ack();
