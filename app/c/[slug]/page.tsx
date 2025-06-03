@@ -25,6 +25,7 @@ export default async function ContestPage({ params }: ContestPageProps) {
 
   // Check if user is authenticated (optional for public contests)
   const headersList = await headers()
+  const userToken = headersList.get('x-whop-user-token')
   const { userId } = await verifyUserToken(headersList)
 
   // Get user and experience data if authenticated
@@ -159,6 +160,7 @@ export default async function ContestPage({ params }: ContestPageProps) {
               userId={userId || undefined}
               isParticipating={isParticipating}
               experienceId={experienceId}
+              userToken={userToken}
             />
 
             <div className="p-6">

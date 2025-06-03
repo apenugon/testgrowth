@@ -136,9 +136,9 @@ export function ContestTimeframeStep({ data, onUpdate, onNext, onPrev }: Contest
           )}
         </div>
 
-        {/* Duration Display */}
-        {duration && (
-          <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+        {/* Duration Preview */}
+        {isValid && duration && (
+          <div className="p-4 bg-emerald-50 rounded-lg">
             <div className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
               <span className="text-sm font-medium text-emerald-800">

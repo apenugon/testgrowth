@@ -72,7 +72,7 @@ export function ContestReviewStep({
       </div>
 
       {/* Contest Summary */}
-      <div className="space-y-4 p-6 bg-gray-50 border border-gray-200 rounded-lg">
+      <div className="space-y-4 p-6 bg-gray-50 rounded-lg">
         <div>
           <h3 className="text-xl font-bold text-gray-900">{data.name}</h3>
         </div>
@@ -101,19 +101,17 @@ export function ContestReviewStep({
       </div>
 
       {/* Important Notes */}
-      <Card className="border-amber-200 bg-amber-50">
-        <CardContent className="p-4">
-          <h4 className="font-medium text-amber-900 mb-2">Before Publishing</h4>
-          <ul className="text-sm text-amber-800 space-y-1">
-            <li>• Once published, contest details cannot be changed</li>
-            <li>• Participants will be able to join immediately</li>
-            {data.prizePoolCents > 0 && (
-              <li>• Your prize pool contribution ({formatCurrency(data.prizePoolCents)}) will be held in escrow</li>
-            )}
-            <li>• You can monitor progress and manage participants from the contest page</li>
-          </ul>
-        </CardContent>
-      </Card>
+      <div className="space-y-4 p-6 bg-amber-50 rounded-lg">
+        <h3 className="text-lg font-semibold text-amber-900">Before Publishing</h3>
+        <ul className="text-sm text-amber-800 space-y-1">
+          <li>• Once published, contest details cannot be changed</li>
+          <li>• Participants will be able to join immediately</li>
+          {data.prizePoolCents > 0 && (
+            <li>• Your prize pool contribution ({formatCurrency(data.prizePoolCents)}) will be held in escrow</li>
+          )}
+          <li>• You can monitor progress and manage participants from the contest page</li>
+        </ul>
+      </div>
 
       {/* Error Display */}
       {error && (

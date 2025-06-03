@@ -3,11 +3,11 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -44,13 +44,15 @@ interface ContestPageHeaderProps {
   userId?: string | null;
   isParticipating: boolean;
   experienceId?: string | null;
+  userToken?: string | null;
 }
 
 export function ContestPageHeader({ 
   contest, 
   userId, 
   isParticipating, 
-  experienceId 
+  experienceId,
+  userToken 
 }: ContestPageHeaderProps) {
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [stores, setStores] = useState<ShopifyStore[]>([]);
@@ -252,6 +254,31 @@ export function ContestPageHeader({
     setShowJoinModal(true);
   };
 
+  const handleWithdraw = async () => {
+    if (!userId || !isParticipating) return;
+
+    try {
+      const response = await fetch(`/api/contests/${contest.id}/withdraw`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(userToken && { 'x-whop-user-token': userToken }),
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to withdraw from contest');
+      }
+
+      // Refresh the page to update participation status
+      window.location.reload();
+    } catch (err) {
+      console.error('Error withdrawing from contest:', err);
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+    }
+  };
+
   // Update countdown every second
   useEffect(() => {
     if (!isParticipating || timeStatus === 'ended') return;
@@ -302,7 +329,7 @@ export function ContestPageHeader({
         <div className="flex flex-col items-center space-y-6 max-w-sm mx-auto">
           {/* Prize Pool */}
           {totalPrizePool > 0 && (
-            <div className="bg-white rounded-lg px-8 py-6 shadow-lg border border-gray-200 w-full">
+            <div className="bg-white rounded-lg px-8 py-6 shadow-lg w-full">
               <div className="text-center">
                 <div className="text-3xl font-bold text-emerald-600">
                   {formatCurrency(totalPrizePool)}
@@ -337,12 +364,24 @@ export function ContestPageHeader({
         </div>
       </div>
 
+      {/* Withdraw Link for Upcoming Contests */}
+      {isParticipating && timeStatus === 'upcoming' && (
+        <div className="text-center py-4">
+          <button
+            onClick={handleWithdraw}
+            className="text-sm text-red-600 hover:text-red-700 underline transition-colors"
+          >
+            Withdraw
+          </button>
+        </div>
+      )}
+
       {/* Store Selection Modal */}
-      <AlertDialog open={showJoinModal} onOpenChange={setShowJoinModal}>
-        <AlertDialogContent className="max-w-sm">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Select Store</AlertDialogTitle>
-          </AlertDialogHeader>
+      <Dialog open={showJoinModal} onOpenChange={setShowJoinModal}>
+        <DialogContent className="max-w-sm [&>button]:hidden">
+          <DialogHeader>
+            <DialogTitle>Select Store</DialogTitle>
+          </DialogHeader>
           <div className="space-y-4">
             {/* Store Selection */}
             {stores.length > 1 ? (
@@ -405,8 +444,8 @@ export function ContestPageHeader({
               Connect Different Store
             </Button>
           </div>
-        </AlertDialogContent>
-      </AlertDialog>
+        </DialogContent>
+      </Dialog>
     </>
   );
 } 

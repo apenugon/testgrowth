@@ -70,52 +70,57 @@ export function ContestPricingStep({ data, onUpdate, onNext, onPrev }: ContestPr
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Prize Pool Input */}
-        <div className="space-y-4 p-6 bg-emerald-50 border border-emerald-200 rounded-lg">
-          <div className="flex items-center space-x-2 mb-4">
-            <Trophy className="h-6 w-6 text-emerald-600" />
-            <h3 className="text-xl font-semibold text-emerald-900">Winner's Prize</h3>
-          </div>
+        {/* Contest Info */}
+        <div className="space-y-4 p-6 bg-emerald-50 rounded-lg">
+          <h3 className="text-lg font-semibold text-emerald-900">Contest Details</h3>
 
-          <div className="space-y-2">
-            <Label htmlFor="prizePool">Prize Amount (USD)</Label>
-            <div className="relative">
-              <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                id="prizePool"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                className="pl-10 text-lg"
-                {...register("prizePoolCents", {
-                  valueAsNumber: true,
-                })}
-              />
+          {/* Prize Pool Input */}
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2 mb-4">
+              <Trophy className="h-6 w-6 text-emerald-600" />
+              <h3 className="text-xl font-semibold text-emerald-900">Winner's Prize</h3>
             </div>
-            {errors.prizePoolCents && (
-              <p className="text-sm text-red-500">{errors.prizePoolCents.message}</p>
-            )}
-          </div>
 
-          {/* Preset Prize Pools */}
-          <div className="space-y-3">
-            <Label>Quick Presets</Label>
-            <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
-              {presetPrizePools.map((preset) => (
-                <Button
-                  key={preset.dollars}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setValue("prizePoolCents", preset.dollars, { shouldValidate: true })}
-                >
-                  {preset.label}
-                </Button>
-              ))}
+            <div className="space-y-2">
+              <Label htmlFor="prizePool">Prize Amount (USD)</Label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  id="prizePool"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  className="pl-10 text-lg"
+                  {...register("prizePoolCents", {
+                    valueAsNumber: true,
+                  })}
+                />
+              </div>
+              {errors.prizePoolCents && (
+                <p className="text-sm text-red-500">{errors.prizePoolCents.message}</p>
+              )}
             </div>
-          </div>
 
+            {/* Preset Prize Pools */}
+            <div className="space-y-3">
+              <Label>Quick Presets</Label>
+              <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
+                {presetPrizePools.map((preset) => (
+                  <Button
+                    key={preset.dollars}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setValue("prizePoolCents", preset.dollars, { shouldValidate: true })}
+                  >
+                    {preset.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+          </div>
         </div>
 
         {/* Navigation */}

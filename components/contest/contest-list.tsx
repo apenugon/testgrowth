@@ -326,10 +326,35 @@ export function ContestList({
                         </div>
                       </div>
 
-                      {/* Right side: Participants */}
-                      <div className="flex items-center space-x-2 text-sm">
-                        <Users className="w-4 h-4 text-gray-500" />
-                        <span>{contest._count.participants} joined</span>
+                      {/* Right side: Participants and Action Button */}
+                      <div className="flex flex-col items-end space-y-3">
+                        {/* Action Button */}
+                        <div onClick={(e) => e.preventDefault()}>
+                          {activeFilter === 'my-contests' ? (
+                            <Button variant="outline" size="sm">
+                              <Eye className="w-4 h-4 mr-1" />
+                              View
+                            </Button>
+                          ) : timeStatus === 'upcoming' ? (
+                            <Button>
+                              Join Contest
+                            </Button>
+                          ) : timeStatus === 'active' ? (
+                            <Button>
+                              View Details
+                            </Button>
+                          ) : (
+                            <Button variant="outline">
+                              View Results
+                            </Button>
+                          )}
+                        </div>
+
+                        {/* Participants Count */}
+                        <div className="flex items-center space-x-2 text-sm">
+                          <Users className="w-4 h-4 text-gray-500" />
+                          <span>{contest._count.participants} joined</span>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
