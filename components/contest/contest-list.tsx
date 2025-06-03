@@ -92,7 +92,7 @@ export function ContestList({
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<FilterType>('upcoming');
   const searchParams = useSearchParams();
-  const shouldShowList = searchParams.get('view') === 'list';
+  const shouldShowList = searchParams.get('view') === 'list' || searchParams.get('fromCreate') === 'true';
 
   // Determine the best default filter based on available contests
   useEffect(() => {
@@ -297,7 +297,7 @@ export function ContestList({
         {isCreator && showMyContests && (
           <div className="mb-6">
             <Button asChild>
-              <Link href={`/experiences/${experienceId}/create`}>
+              <Link href={`/experiences/${experienceId}/create?returnTo=${encodeURIComponent(`/experiences/${experienceId}?view=list`)}`}>
                 <Plus className="w-4 h-4 mr-2" />
                 Create Contest
               </Link>
@@ -365,7 +365,7 @@ export function ContestList({
             </p>
             {activeFilter === 'my-contests' && isCreator && (
               <Button asChild>
-                <Link href={`/experiences/${experienceId}/create`}>
+                <Link href={`/experiences/${experienceId}/create?returnTo=${encodeURIComponent(`/experiences/${experienceId}?view=list`)}`}>
                   <Plus className="w-4 h-4 mr-2" />
                   Create Your First Contest
                 </Link>

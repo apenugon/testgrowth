@@ -52,8 +52,8 @@ export default async function ShopifyConnectionsPage({
         user={user || undefined}
         experienceId={experienceId}
         showBackButton={true}
-        backHref={`/experiences/${experienceId}`}
-        backLabel="Back"
+        backHref={`/experiences/${experienceId}?view=list`}
+        backLabel="Back to Contests"
       />
       
       <div className="py-8 px-4">

@@ -55,8 +55,8 @@ export default async function CreateContestPage({
         user={user || undefined}
         experienceId={experienceId}
         showBackButton={true}
-        backHref={`/experiences/${experienceId}`}
-        backLabel="Back to Dashboard"
+        backHref={`/experiences/${experienceId}?view=list`}
+        backLabel="Back to Contests"
       />
       
       <div className="py-12 px-4">

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { ChevronLeft } from "lucide-react"
@@ -26,7 +27,9 @@ export function ContestReviewStep({
   setIsSubmitting 
 }: ContestReviewStepProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [error, setError] = useState<string | null>(null)
+  const returnTo = searchParams.get('returnTo')
 
   const handlePublish = async () => {
     setIsSubmitting(true)
@@ -49,12 +52,17 @@ export function ContestReviewStep({
 
       const contest = await response.json()
       
-      // Redirect to the contest page using the experience-scoped path
-      const contestPath = experienceId 
-        ? `/experiences/${experienceId}/contest/${contest.slug}`
-        : `/c/${contest.slug}` // fallback for backwards compatibility
-      
-      router.push(contestPath)
+      // Check if we have a returnTo URL, otherwise redirect to contest page
+      if (returnTo) {
+        router.push(returnTo)
+      } else {
+        // Default behavior: redirect to the contest page
+        const contestPath = experienceId 
+          ? `/experiences/${experienceId}/contest/${contest.slug}?fromCreate=true`
+          : `/c/${contest.slug}?fromCreate=true`
+        
+        router.push(contestPath)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred')
     } finally {
