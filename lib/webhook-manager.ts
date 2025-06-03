@@ -1,7 +1,10 @@
-import { PubSub, Message } from '@google-cloud/pubsub';
 import { prisma } from './prisma';
 import { createShopifyClient, createWebhook, deleteWebhook } from './shopify';
 import fs from 'fs';
+
+// Conditionally import Google Cloud PubSub only when needed
+let PubSub: any = null;
+let Message: any = null;
 
 // Check if Google Cloud is properly configured
 function isGoogleCloudConfigured(): boolean {
@@ -28,15 +31,25 @@ function isGoogleCloudConfigured(): boolean {
   return true;
 }
 
-// Initialize Google Pub/Sub client only if properly configured
-let pubsub: PubSub | null = null;
+// Lazy load Google Cloud PubSub imports
+async function loadPubSubDependencies() {
+  if (!PubSub) {
+    const module = await import('@google-cloud/pubsub');
+    PubSub = module.PubSub;
+    Message = module.Message;
+  }
+}
 
-function getPubSubClient(): PubSub | null {
+// Initialize Google Pub/Sub client only if properly configured
+let pubsub: any = null;
+
+async function getPubSubClient(): Promise<any> {
   if (!isGoogleCloudConfigured()) {
     return null;
   }
   
   if (!pubsub) {
+    await loadPubSubDependencies();
     pubsub = new PubSub({
       projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
     });
@@ -78,7 +91,7 @@ export class ShopifyWebhookManager implements ContestWebhookManager {
    * Ensure all required Pub/Sub topics exist
    */
   private async ensureTopicsExist(): Promise<void> {
-    const client = getPubSubClient();
+    const client = await getPubSubClient();
     if (!client) {
       console.log('Skipping Pub/Sub topic creation - Google Cloud not configured');
       return;
@@ -230,7 +243,7 @@ export class ShopifyWebhookManager implements ContestWebhookManager {
   async startSubscribing(): Promise<void> {
     console.log('Starting Pub/Sub subscriptions for webhook processing');
     
-    const client = getPubSubClient();
+    const client = await getPubSubClient();
     if (!client) {
       console.log('Skipping Pub/Sub subscriptions - Google Cloud not configured');
       return;
@@ -245,7 +258,7 @@ export class ShopifyWebhookManager implements ContestWebhookManager {
         const [subscription] = await topic.subscription(subscriptionName).get({ autoCreate: true });
 
         // Set up message handler
-        subscription.on('message', (message: Message) => {
+        subscription.on('message', (message: any) => {
           this.handlePubSubMessage(message, webhookTopic as WebhookTopic);
         });
 
@@ -282,7 +295,7 @@ export class ShopifyWebhookManager implements ContestWebhookManager {
   /**
    * Handle incoming Pub/Sub message
    */
-  private async handlePubSubMessage(message: Message, eventType: WebhookTopic): Promise<void> {
+  private async handlePubSubMessage(message: any, eventType: WebhookTopic): Promise<void> {
    return; 
 	try {
       // Parse the Shopify webhook data
@@ -617,5 +630,12 @@ export async function recalculateAllContestBalances(contestId: string): Promise<
   console.log(`Finished recalculating balances for ${participants.length} participants`);
 }
 
-// Export singleton instance
-export const webhookManager = new ShopifyWebhookManager(); 
+// Conditionally export singleton instance - only create if Google Cloud is configured
+let webhookManagerInstance: ShopifyWebhookManager | null = null;
+
+export const webhookManager = (() => {
+  if (isGoogleCloudConfigured() && !webhookManagerInstance) {
+    webhookManagerInstance = new ShopifyWebhookManager();
+  }
+  return webhookManagerInstance;
+})(); 

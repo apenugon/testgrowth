@@ -5,14 +5,19 @@ import { webhookManager } from './webhook-manager';
  * This sets up Pub/Sub subscriptions to listen for webhook messages
  */
 export async function initWebhooks(): Promise<void> {
-  console.log('🚀 Starting webhook system...');
-  return;
   try {
-    // Start Pub/Sub subscriptions (this should always be running)
+    console.log('🔌 Initializing webhook system...');
+    
+    if (!webhookManager) {
+      console.log('📝 Webhook manager not available (Google Cloud not configured) - skipping initialization');
+      return;
+    }
+
+    // Start subscribing to Pub/Sub topics
     await webhookManager.startSubscribing();
-    console.log('✅ Webhook system initialized and listening for messages');
+    
+    console.log('✅ Webhook system initialized successfully');
   } catch (error) {
     console.error('❌ Failed to initialize webhook system:', error);
-    throw error;
   }
 } 

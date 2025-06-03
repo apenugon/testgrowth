@@ -36,6 +36,11 @@ export async function updateContestStatus(contestId: string, newStatus: ContestS
 async function handleContestStart(contestId: string) {
   console.log(`Starting contest ${contestId} - setting up Shopify webhooks to Pub/Sub`);
   
+  if (!webhookManager) {
+    console.log('📝 Webhook manager not available - skipping webhook setup');
+    return;
+  }
+  
   try {
     await webhookManager.setupWebhooksForContest(contestId);
     console.log(`Successfully set up webhooks for contest ${contestId}`);
@@ -51,11 +56,15 @@ async function handleContestStart(contestId: string) {
 async function handleContestEnd(contestId: string) {
   console.log(`Ending contest ${contestId} - cleaning up Shopify webhooks`);
   
-  try {
-    await webhookManager.removeWebhooksForContest(contestId);
-    console.log(`Successfully removed webhooks for contest ${contestId}`);
-  } catch (error) {
-    console.error(`Failed to remove webhooks for contest ${contestId}:`, error);
+  if (!webhookManager) {
+    console.log('📝 Webhook manager not available - skipping webhook cleanup');
+  } else {
+    try {
+      await webhookManager.removeWebhooksForContest(contestId);
+      console.log(`Successfully removed webhooks for contest ${contestId}`);
+    } catch (error) {
+      console.error(`Failed to remove webhooks for contest ${contestId}:`, error);
+    }
   }
 
   // Calculate final results and payouts
@@ -115,5 +124,67 @@ export async function updateContestStatuses() {
 
   for (const contest of contestsToEnd) {
     await updateContestStatus(contest.id, 'CLOSED');
+  }
+}
+
+/**
+ * All the logic that happens when a contest starts
+ */
+export async function startContest(contestId: string): Promise<void> {
+  console.log(`🏁 Starting contest ${contestId}`);
+
+  try {
+    // Update contest status
+    await prisma.contest.update({
+      where: { id: contestId },
+      data: { 
+        status: 'ACTIVE',
+        actualStartAt: new Date()
+      },
+    });
+
+    // Set up webhooks for all participating stores (only if webhook manager is available)
+    if (webhookManager) {
+      await webhookManager.setupWebhooksForContest(contestId);
+    } else {
+      console.log('📝 Webhook manager not available - skipping webhook setup');
+    }
+    
+    console.log(`✅ Contest ${contestId} started successfully`);
+  } catch (error) {
+    console.error(`❌ Failed to start contest ${contestId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * All the logic that happens when a contest ends
+ */
+export async function endContest(contestId: string): Promise<void> {
+  console.log(`🏁 Ending contest ${contestId}`);
+
+  try {
+    // Update contest status
+    await prisma.contest.update({
+      where: { id: contestId },
+      data: { 
+        status: 'ENDED',
+        actualEndAt: new Date()
+      },
+    });
+
+    // Remove webhooks for this contest (only if webhook manager is available)
+    if (webhookManager) {
+      await webhookManager.removeWebhooksForContest(contestId);
+    } else {
+      console.log('📝 Webhook manager not available - skipping webhook cleanup');
+    }
+    
+    // TODO: Distribute prizes to winners
+    
+    console.log(`✅ Contest ${contestId} ended successfully`);
+  } catch (error) {
+    console.error(`❌ Failed to end contest ${contestId}:`, error);
+    throw error;
   }
 } 
