@@ -18,6 +18,9 @@ import {
 import { ShoppingBag, Clock } from "lucide-react";
 import { formatCurrency, formatDate, getContestTimeStatus } from "@/lib/utils";
 
+// TEMPORARY: Set to true to skip Shopify connection requirement
+const SKIP_SHOPIFY_CHECK = true;
+
 type Contest = {
   id: string;
   name: string;
@@ -210,14 +213,19 @@ export function ContestPageHeader({
     setError(null);
 
     try {
+      const requestBody: any = {};
+      
+      // Only include storeId if not skipping Shopify checks
+      if (!SKIP_SHOPIFY_CHECK) {
+        requestBody.storeId = selectedStoreId || stores[0]?.id;
+      }
+
       const response = await fetch(`/api/contests/${contest.id}/join`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          storeId: selectedStoreId || stores[0]?.id
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -237,6 +245,14 @@ export function ContestPageHeader({
   const handleJoinClick = async () => {
     if (!userId || !isJoinable) return;
 
+    // TEMPORARY: Skip Shopify checks if flag is set
+    if (SKIP_SHOPIFY_CHECK) {
+      // Skip all Shopify-related checks and join directly
+      await handleJoin();
+      return;
+    }
+
+    // Original Shopify-dependent logic
     console.log('Join button clicked, fetching stores...');
     // Fetch stores first
     const fetchedStores = await fetchStores();

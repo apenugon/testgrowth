@@ -3,6 +3,9 @@ import { verifyUserToken } from '@whop/api'
 import { joinContest, findContestBySlug } from '@/lib/db/contests'
 import { prisma } from '@/lib/prisma'
 
+// TEMPORARY: Set to true to skip Shopify connection requirement
+const SKIP_SHOPIFY_CHECK = true;
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ contestId: string }> }
@@ -72,38 +75,67 @@ export async function POST(
       return NextResponse.json({ error: 'Contest is full' }, { status: 400 })
     }
 
-    // Get user's Shopify store - either the specified one or first active one
+    // TEMPORARY: Skip Shopify store requirement if flag is set
+    // Set SKIP_SHOPIFY_CHECK=true in environment to allow joining without Shopify connection
+    
     let userStore = null
     
-    if (requestedStoreId) {
-      // Use specific store if provided
+    if (!SKIP_SHOPIFY_CHECK) {
+      // Original Shopify store check logic
+      if (requestedStoreId) {
+        // Use specific store if provided
+        userStore = await prisma.shopifyStore.findFirst({
+          where: { 
+            id: requestedStoreId,
+            userId,
+            isActive: true 
+          },
+        })
+        
+        if (!userStore) {
+          return NextResponse.json({ 
+            error: 'Selected Shopify store not found or inactive' 
+          }, { status: 400 })
+        }
+      } else {
+        // Fall back to first active store
+        userStore = await prisma.shopifyStore.findFirst({
+          where: { 
+            userId,
+            isActive: true 
+          },
+        })
+      }
+
+      if (!userStore) {
+        return NextResponse.json({ 
+          error: 'You must connect a Shopify store to join this contest' 
+        }, { status: 400 })
+      }
+    } else {
+      // TEMPORARY: When skipping Shopify check, create a dummy store entry if none exists
+      console.log('⚠️  SKIPPING SHOPIFY CHECK - Development mode')
+      
+      // Try to find any existing store first
       userStore = await prisma.shopifyStore.findFirst({
         where: { 
-          id: requestedStoreId,
           userId,
           isActive: true 
         },
       })
       
+      // If no store exists, create a temporary one for development
       if (!userStore) {
-        return NextResponse.json({ 
-          error: 'Selected Shopify store not found or inactive' 
-        }, { status: 400 })
+        userStore = await prisma.shopifyStore.create({
+          data: {
+            userId,
+            shopDomain: `temp-${userId.slice(-8)}.myshopify.com`, // Use last 8 chars of user ID
+            accessToken: 'temp-token-dev-only', // Temporary token
+            isActive: true,
+          }
+        })
+        console.log(`Created temporary store for user ${userId}: ${userStore.shopDomain}`)
       }
-    } else {
-      // Fall back to first active store
-      userStore = await prisma.shopifyStore.findFirst({
-        where: { 
-          userId,
-          isActive: true 
-        },
-      })
-    }
-
-    if (!userStore) {
-      return NextResponse.json({ 
-        error: 'You must connect a Shopify store to join this contest' 
-      }, { status: 400 })
     }
 
     // Join the contest with current timestamp as joinedAt

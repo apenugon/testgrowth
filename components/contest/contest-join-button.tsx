@@ -15,6 +15,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
+// TEMPORARY: Set to true to skip Shopify connection requirement
+const SKIP_SHOPIFY_CHECK = true;
+
 type Contest = {
   id: string
   name: string
@@ -59,6 +62,13 @@ export function ContestJoinButton({ contest, userId, isParticipating, experience
   useEffect(() => {
     const fetchStores = async () => {
       if (!userId) {
+        setCheckingStores(false)
+        return
+      }
+
+      // TEMPORARY: Skip store fetching if flag is set
+      if (SKIP_SHOPIFY_CHECK) {
+        setStores([]) // Set empty stores array
         setCheckingStores(false)
         return
       }
@@ -140,6 +150,14 @@ export function ContestJoinButton({ contest, userId, isParticipating, experience
       return
     }
 
+    // TEMPORARY: Skip Shopify checks if flag is set
+    if (SKIP_SHOPIFY_CHECK) {
+      // Skip all Shopify-related checks and join directly
+      await handleJoin()
+      return
+    }
+
+    // Original Shopify-dependent logic
     // If user doesn't have stores, prompt to add one
     if (stores.length === 0) {
       handleAddStore()
@@ -161,14 +179,19 @@ export function ContestJoinButton({ contest, userId, isParticipating, experience
     setError(null)
 
     try {
+      const requestBody: any = {}
+      
+      // Only include storeId if not skipping Shopify checks
+      if (!SKIP_SHOPIFY_CHECK) {
+        requestBody.storeId = selectedStoreId || stores[0]?.id
+      }
+
       const response = await fetch(`/api/contests/${contest.id}/join`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          storeId: selectedStoreId || stores[0]?.id
-        }),
+        body: JSON.stringify(requestBody),
       })
 
       if (!response.ok) {
@@ -186,6 +209,8 @@ export function ContestJoinButton({ contest, userId, isParticipating, experience
   }
 
   const getJoinStatus = () => {
+    // TEMPORARY: Skip Shopify requirement if flag is set
+    
     if (!userId) {
       return {
         canJoin: false,
@@ -231,7 +256,8 @@ export function ContestJoinButton({ contest, userId, isParticipating, experience
       }
     }
 
-    if (stores.length === 0) {
+    // TEMPORARY: Skip Shopify store requirement when flag is enabled
+    if (!SKIP_SHOPIFY_CHECK && stores.length === 0) {
       return {
         canJoin: true,
         reason: "Connect your Shopify store to join",
