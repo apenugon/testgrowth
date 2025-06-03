@@ -101,6 +101,21 @@ export async function GET(request: Request) {
 
     // Find or create the user record
     console.log('Finding/creating user record for:', whopUserId)
+    
+    // Get user info from Whop API to get real username
+    let whopUsername = whopUserId; // fallback
+    let whopName = null;
+    try {
+      const { whopApi } = await import('@/lib/whop-api');
+      const whopUser = await whopApi.getUser({ userId: whopUserId });
+      if (whopUser.publicUser) {
+        whopUsername = whopUser.publicUser.username;
+        whopName = whopUser.publicUser.name;
+      }
+    } catch (error) {
+      console.error('Failed to fetch Whop user info:', error);
+    }
+    
     let user = await prisma.user.findUnique({
       where: { whopUserId: whopUserId }
     })
@@ -111,12 +126,25 @@ export async function GET(request: Request) {
         data: {
           whopUserId: whopUserId,
           email: `${whopUserId}@whop.user`,
-          username: whopUserId,
+          username: whopUsername,
+          name: whopName,
         }
       })
       console.log('New user created:', user.id)
     } else {
       console.log('Existing user found:', user.id)
+      
+      // Update username if it's different (sync with Whop)
+      if (user.username !== whopUsername || user.name !== whopName) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            username: whopUsername,
+            name: whopName,
+          }
+        })
+        console.log('User updated with latest Whop info')
+      }
     }
 
     // Check if store is already connected by ANY user (prevent duplicate connections)

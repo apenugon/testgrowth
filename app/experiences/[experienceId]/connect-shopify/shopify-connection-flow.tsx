@@ -208,49 +208,6 @@ export function ShopifyConnectionFlow({
             </CardContent>
           </Card>
 
-          {/* Connection Steps */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <ShoppingBag className="w-5 h-5" />
-                <span>Connection Process</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-start space-x-3">
-                  <CheckCircle className="w-5 h-5 text-emerald-600 mt-0.5" />
-                  <div>
-                    <h4 className="font-medium text-gray-900">Automatic Sales Tracking</h4>
-                    <p className="text-sm text-gray-600">
-                      We automatically track your sales and orders during contest periods
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start space-x-3">
-                  <CheckCircle className="w-5 h-5 text-emerald-600 mt-0.5" />
-                  <div>
-                    <h4 className="font-medium text-gray-900">Real-time Leaderboards</h4>
-                    <p className="text-sm text-gray-600">
-                      See your ranking update in real-time as you make sales
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start space-x-3">
-                  <CheckCircle className="w-5 h-5 text-emerald-600 mt-0.5" />
-                  <div>
-                    <h4 className="font-medium text-gray-900">Secure & Private</h4>
-                    <p className="text-sm text-gray-600">
-                      We only access sales data during active contests you've joined
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Error Display */}
           {error && (
             <Card className="mb-6 border-red-200 bg-red-50">

@@ -3,7 +3,7 @@ import { verifyUserToken } from "@whop/api"
 import { headers } from "next/headers"
 import { notFound, redirect } from "next/navigation"
 import { Header } from "@/components/layout/header"
-import { ContestHeader } from "@/components/contest/contest-header"
+import { ContestPageHeader } from "@/components/contest/contest-page-header"
 import { ContestLeaderboard } from "@/components/contest/contest-leaderboard"
 import { ContestJoinButton } from "@/components/contest/contest-join-button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -66,6 +66,28 @@ export default async function ContestPage({ params }: ContestPageProps) {
       })
       if (dbUser) {
         internalUserId = dbUser.id
+        
+        // Update user record with latest Whop username if different
+        if (dbUser.username !== publicUser.username) {
+          await prisma.user.update({
+            where: { id: dbUser.id },
+            data: { 
+              username: publicUser.username,
+              name: publicUser.name || undefined
+            }
+          })
+        }
+      } else if (publicUser) {
+        // Create user record if it doesn't exist
+        const newUser = await prisma.user.create({
+          data: {
+            whopUserId: userId,
+            username: publicUser.username,
+            name: publicUser.name || undefined,
+            email: `${userId}@whop.user`,
+          }
+        })
+        internalUserId = newUser.id
       }
     } catch (error) {
       console.error("Error fetching user data:", error)
@@ -83,7 +105,7 @@ export default async function ContestPage({ params }: ContestPageProps) {
   // Transform contest data to match component types
   const participantsForLeaderboard = contest.participants.map(p => ({
     id: p.contestId,
-    userId: p.userId,
+    userId: p.user.whopUserId,
     totalSales: p.totalSales,
     orderCount: p.orderCount,
     user: {
@@ -119,102 +141,35 @@ export default async function ContestPage({ params }: ContestPageProps) {
       />
       
       <div className="py-8 px-4">
-        <div className="max-w-6xl mx-auto space-y-8">
-          {/* Contest Header */}
-          <ContestHeader 
-            contest={contestForHeader} 
-            isCreator={isCreator}
-            participantCount={contest.participants.length}
-          />
+        <div className="max-w-6xl mx-auto">
+          {/* Integrated Contest Card */}
+          <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+            <ContestPageHeader
+              contest={{
+                id: contest.id,
+                name: contest.name,
+                slug: contest.slug,
+                startAt: contest.startAt,
+                endAt: contest.endAt,
+                prizePoolCents: contest.prizePoolCents,
+                prizePoolType: contest.prizePoolType,
+                entryFeeCents: contest.entryFeeCents,
+                maxParticipants: contest.maxParticipants,
+                status: contest.status,
+                isPublic: contest.isPublic,
+                participants: contest.participants.map(p => ({ userId: p.userId })),
+              }}
+              userId={userId}
+              isParticipating={isParticipating}
+              experienceId={experienceId}
+            />
 
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Main Content */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Contest Description */}
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                    About This Contest
-                  </h3>
-                  <p className="text-gray-600 whitespace-pre-wrap">
-                    {contest.description}
-                  </p>
-                </CardContent>
-              </Card>
-
-              {/* Leaderboard */}
+            <div className="p-6">
               <ContestLeaderboard 
                 contest={contest}
                 participants={participantsForLeaderboard}
                 currentUserId={userId}
               />
-            </div>
-
-            {/* Sidebar */}
-            <div className="space-y-6">
-              {/* Join/Status Card */}
-              <ContestJoinButton
-                contest={contestForJoinButton}
-                userId={userId}
-                isParticipating={isParticipating}
-                experienceId={experienceId}
-              />
-
-              {/* Contest Stats */}
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    Contest Stats
-                  </h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Participants</span>
-                      <span className="font-medium">
-                        {contest.participants.length}
-                        {contest.maxParticipants && ` / ${contest.maxParticipants}`}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Metric</span>
-                      <span className="font-medium">
-                        {contest.metric === 'TOTAL_SALES' ? 'Total Sales' : 'Order Count'}
-                      </span>
-                    </div>
-                    {contest.entryFeeCents > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Entry Fee</span>
-                        <span className="font-medium">
-                          ${(contest.entryFeeCents / 100).toFixed(2)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Creator Info */}
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                    Contest Creator
-                  </h3>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center">
-                      <span className="text-white font-medium">
-                        {contestForHeader.creator.name?.[0] || contestForHeader.creator.username[0].toUpperCase()}
-                      </span>
-                    </div>
-                    <div>
-                      <div className="font-medium text-gray-900">
-                        {contestForHeader.creator.name || contestForHeader.creator.username}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        @{contestForHeader.creator.username}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           </div>
         </div>

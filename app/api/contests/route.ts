@@ -7,7 +7,7 @@ import { verifyUserToken } from "@whop/api"
 
 const createContestSchema = z.object({
   name: z.string().min(3),
-  description: z.string().min(10),
+  description: z.string().optional(),
   metric: z.enum(["TOTAL_SALES", "ORDER_COUNT"]),
   startAt: z.string().transform((str) => new Date(str)),
   endAt: z.string().transform((str) => new Date(str)),
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     const contest = await createContest({
       creatorId: dbUser.id, // Use the internal database user ID, not the Whop user ID
       name: validatedData.name,
-      description: validatedData.description,
+      description: validatedData.description || "",
       metric: validatedData.metric,
       startAt: validatedData.startAt,
       endAt: validatedData.endAt,

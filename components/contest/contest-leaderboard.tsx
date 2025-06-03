@@ -98,76 +98,66 @@ export function ContestLeaderboard({ contest, participants, currentUserId }: Con
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <Trophy className="h-5 w-5 text-emerald-600" />
-          <span>Leaderboard</span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {participants.length === 0 ? (
-          <div className="text-center py-8">
-            <Trophy className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">No participants yet</p>
-            <p className="text-sm text-gray-400">Be the first to join!</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {sortedParticipants.map((participant, index) => {
-              const rank = index + 1
-              const prizeAmount = getPrizeAmount(rank)
-              const isCurrentUser = currentUserId === participant.userId
-              
-              return (
-                <div
-                  key={participant.id}
-                  className={`flex items-center justify-between p-4 rounded-lg border ${
-                    isCurrentUser 
-                      ? 'bg-emerald-50 border-emerald-200' 
-                      : rank <= 3 
-                      ? 'bg-gradient-to-r from-gray-50 to-white border-gray-200'
-                      : 'bg-white border-gray-100'
-                  }`}
-                >
-                  <div className="flex items-center space-x-3">
-                    {getRankIcon(rank)}
-                    
-                    <div>
-                      <div className="font-medium text-gray-900">
-                        {participant.user.name || participant.user.username}
-                        {isCurrentUser && (
-                          <Badge variant="secondary" className="ml-2 text-xs">You</Badge>
-                        )}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        @{participant.user.username}
-                      </div>
-                    </div>
+    <div>
+      {participants.length === 0 ? (
+        <div className="text-center py-8">
+          <Trophy className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500">No participants yet</p>
+          <p className="text-sm text-gray-400">Be the first to join!</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {sortedParticipants.map((participant, index) => {
+            const rank = index + 1
+            const prizeAmount = getPrizeAmount(rank)
+            const isCurrentUser = currentUserId === participant.userId
+            
+            return (
+              <div
+                key={participant.id}
+                className={`flex items-center justify-between p-4 rounded-lg border ${
+                  isCurrentUser 
+                    ? 'bg-emerald-50 border-emerald-200' 
+                    : rank <= 3 
+                    ? 'bg-gradient-to-r from-gray-50 to-white border-gray-200'
+                    : 'bg-white border-gray-100'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="text-lg font-bold text-gray-700 min-w-[2rem]">
+                    {rank}
                   </div>
-
-                  <div className="text-right">
-                    <div className="font-bold text-gray-900">
-                      {getDisplayValue(participant)}
+                  {getRankIcon(rank)}
+                  
+                  <div>
+                    <div className="font-medium text-gray-900">
+                      {participant.user.name || participant.user.username}
+                      {isCurrentUser && (
+                        <Badge variant="secondary" className="ml-2 text-xs">You</Badge>
+                      )}
                     </div>
-                    {prizeAmount > 0 && (
-                      <div className="text-sm text-emerald-600 font-medium">
-                        {formatCurrency(prizeAmount)} prize
-                      </div>
-                    )}
+                    <div className="text-sm text-gray-500">
+                      @{participant.user.username}
+                    </div>
                   </div>
                 </div>
-              )
-            })}
 
-            {participants.length < 10 && (
-              <div className="text-center py-4 text-sm text-gray-500">
-                Showing top {participants.length} participant{participants.length !== 1 ? 's' : ''}
+                <div className="text-right">
+                  <div className="font-bold text-gray-900">
+                    {getDisplayValue(participant)}
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+            )
+          })}
+
+          {participants.length < 10 && (
+            <div className="text-center py-4 text-sm text-gray-500">
+              Showing top {participants.length} participant{participants.length !== 1 ? 's' : ''}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   )
 } 

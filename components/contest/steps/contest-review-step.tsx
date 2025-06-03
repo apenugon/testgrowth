@@ -2,8 +2,8 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ChevronLeft, Calendar, DollarSign, Target, Users, Globe, Lock, Trophy } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
+import { ChevronLeft } from "lucide-react"
 import type { ContestFormData } from "../contest-creation-wizard"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { useRouter } from "next/navigation"
@@ -62,25 +62,6 @@ export function ContestReviewStep({
     }
   }
 
-  const metricLabel = data.metric === 'TOTAL_SALES' ? 'Total Sales Value' : 'Number of Orders'
-  const duration = Math.ceil((data.endAt.getTime() - data.startAt.getTime()) / (1000 * 60 * 60 * 24))
-
-  // Calculate total prize pool
-  const calculateTotalPrizePool = () => {
-    if (data.prizePoolType === "ENTRY_FEES") {
-      const estimatedParticipants = data.maxParticipants || 20
-      return data.entryFeeCents * estimatedParticipants
-    } else if (data.prizePoolType === "CREATOR_FUNDED") {
-      return data.prizePoolCents
-    } else {
-      // HYBRID
-      const estimatedParticipants = data.maxParticipants || 20
-      return (data.entryFeeCents * estimatedParticipants) + data.prizePoolCents
-    }
-  }
-
-  const totalPrizePool = calculateTotalPrizePool()
-
   return (
     <div className="space-y-6">
       <div>
@@ -90,144 +71,34 @@ export function ContestReviewStep({
         </p>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Contest Details */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Target className="h-5 w-5" />
-              <span>Contest Details</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <h4 className="font-medium text-gray-900">{data.name}</h4>
-              <p className="text-sm text-gray-600 mt-1">{data.description}</p>
-            </div>
-            
-            <div className="flex items-center space-x-2 text-sm">
-              <Target className="h-4 w-4 text-emerald-600" />
-              <span>Metric: {metricLabel}</span>
-            </div>
+      {/* Contest Summary */}
+      <div className="space-y-4 p-6 bg-gray-50 border border-gray-200 rounded-lg">
+        <div>
+          <h3 className="text-xl font-bold text-gray-900">{data.name}</h3>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <span className="text-gray-600">Start Date:</span>
+            <div className="font-medium">{formatDate(data.startAt)}</div>
+          </div>
+          <div>
+            <span className="text-gray-600">End Date:</span>
+            <div className="font-medium">{formatDate(data.endAt)}</div>
+          </div>
+        </div>
 
-            <div className="flex items-center space-x-2 text-sm">
-              {data.isPublic ? (
-                <>
-                  <Globe className="h-4 w-4 text-blue-600" />
-                  <span>Public contest</span>
-                </>
-              ) : (
-                <>
-                  <Lock className="h-4 w-4 text-gray-600" />
-                  <span>Private contest</span>
-                </>
-              )}
-            </div>
-
-            {data.maxParticipants && (
-              <div className="flex items-center space-x-2 text-sm">
-                <Users className="h-4 w-4 text-purple-600" />
-                <span>Max {data.maxParticipants} participants</span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Timeframe & Pricing */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Calendar className="h-5 w-5" />
-              <span>Schedule & Pricing</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <div className="text-sm text-gray-600">Start Date</div>
-              <div className="font-medium">{formatDate(data.startAt)}</div>
-            </div>
-            
-            <div>
-              <div className="text-sm text-gray-600">End Date</div>
-              <div className="font-medium">{formatDate(data.endAt)}</div>
-            </div>
-
-            <div>
-              <div className="text-sm text-gray-600">Duration</div>
-              <div className="font-medium">
-                {duration === 1 ? '1 day' : `${duration} days`}
-              </div>
-            </div>
-
-            <div className="pt-2 border-t">
-              <div className="flex items-center space-x-2">
-                <DollarSign className="h-4 w-4 text-emerald-600" />
-                <span className="font-medium">
-                  {data.entryFeeCents === 0 
-                    ? 'Free to join' 
-                    : `${formatCurrency(data.entryFeeCents)} entry fee`
-                  }
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Prize Pool Information */}
-      {totalPrizePool > 0 && (
-        <Card className="border-emerald-200 bg-emerald-50">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Trophy className="h-5 w-5 text-emerald-600" />
-              <span className="text-emerald-900">Prize Pool</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        {data.prizePoolCents > 0 && (
+          <div className="pt-3 border-t border-gray-300">
             <div className="flex items-center justify-between">
-              <span className="text-emerald-800">Total Prize Pool:</span>
-              <span className="text-xl font-bold text-emerald-600">
-                {formatCurrency(totalPrizePool)}
+              <span className="text-gray-600">Prize Pool:</span>
+              <span className="text-2xl font-bold text-emerald-600">
+                {formatCurrency(data.prizePoolCents)}
               </span>
             </div>
-
-            <div className="text-sm text-emerald-700">
-              <strong>Source:</strong> {
-                data.prizePoolType === "ENTRY_FEES" ? "Entry fees only" :
-                data.prizePoolType === "CREATOR_FUNDED" ? "Creator funded" :
-                "Entry fees + Creator contribution"
-              }
-            </div>
-
-            {data.prizePoolType === "ENTRY_FEES" && (
-              <div className="text-xs text-emerald-600">
-                *Estimated based on {data.maxParticipants || 20} participants
-              </div>
-            )}
-
-            <div className="grid grid-cols-3 gap-4 pt-3 border-t border-emerald-200">
-              <div className="text-center">
-                <div className="text-lg font-bold text-emerald-600">
-                  {formatCurrency(Math.round(totalPrizePool * data.firstPlacePercent / 100))}
-                </div>
-                <div className="text-xs text-emerald-700">1st Place ({data.firstPlacePercent}%)</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-bold text-emerald-600">
-                  {formatCurrency(Math.round(totalPrizePool * data.secondPlacePercent / 100))}
-                </div>
-                <div className="text-xs text-emerald-700">2nd Place ({data.secondPlacePercent}%)</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-bold text-emerald-600">
-                  {formatCurrency(Math.round(totalPrizePool * data.thirdPlacePercent / 100))}
-                </div>
-                <div className="text-xs text-emerald-700">3rd Place ({data.thirdPlacePercent}%)</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        )}
+      </div>
 
       {/* Important Notes */}
       <Card className="border-amber-200 bg-amber-50">
@@ -236,10 +107,7 @@ export function ContestReviewStep({
           <ul className="text-sm text-amber-800 space-y-1">
             <li>• Once published, contest details cannot be changed</li>
             <li>• Participants will be able to join immediately</li>
-            {data.entryFeeCents > 0 && (
-              <li>• A Whop payment plan will be created automatically</li>
-            )}
-            {(data.prizePoolType === "CREATOR_FUNDED" || data.prizePoolType === "HYBRID") && data.prizePoolCents > 0 && (
+            {data.prizePoolCents > 0 && (
               <li>• Your prize pool contribution ({formatCurrency(data.prizePoolCents)}) will be held in escrow</li>
             )}
             <li>• You can monitor progress and manage participants from the contest page</li>
@@ -259,7 +127,7 @@ export function ContestReviewStep({
       )}
 
       {/* Navigation */}
-      <div className="flex justify-between pt-6">
+      <div className="flex justify-between">
         <Button type="button" variant="outline" onClick={onPrev} disabled={isSubmitting}>
           <ChevronLeft className="w-4 h-4 mr-2" />
           Back to Pricing
