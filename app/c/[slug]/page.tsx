@@ -8,6 +8,7 @@ import { ContestLeaderboard } from "@/components/contest/contest-leaderboard"
 import { ContestJoinButton } from "@/components/contest/contest-join-button"
 import { Card, CardContent } from "@/components/ui/card"
 import { whopApi } from "@/lib/whop-api"
+import { prisma } from "@/lib/prisma"
 
 interface ContestPageProps {
   params: Promise<{ slug: string }>
@@ -29,6 +30,7 @@ export default async function ContestPage({ params }: ContestPageProps) {
   // Get user and experience data if authenticated
   let user = null
   let experienceId = null
+  let internalUserId = null
   
   if (userId) {
     try {
@@ -39,6 +41,14 @@ export default async function ContestPage({ params }: ContestPageProps) {
           name: publicUser.name || undefined,
           username: publicUser.username
         }
+      }
+
+      // Map Whop user ID to internal user ID
+      const dbUser = await prisma.user.findUnique({
+        where: { whopUserId: userId }
+      })
+      if (dbUser) {
+        internalUserId = dbUser.id
       }
 
       // Check if we can get experience ID from headers or context
@@ -52,13 +62,13 @@ export default async function ContestPage({ params }: ContestPageProps) {
     }
   }
 
-  // Check if user is already participating
-  const isParticipating = userId 
-    ? contest.participants.some(p => p.userId === userId)
+  // Check if user is already participating (using internal user ID)
+  const isParticipating = internalUserId 
+    ? contest.participants.some(p => p.userId === internalUserId)
     : false
 
-  // Check if user is the creator
-  const isCreator = userId === contest.creatorId
+  // Check if user is the creator (using internal user ID)
+  const isCreator = internalUserId === contest.creatorId
 
   // Transform contest data to match component types
   const participantsForLeaderboard = contest.participants.map(p => ({
