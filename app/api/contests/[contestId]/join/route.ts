@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyUserToken } from '@whop/api'
 import { joinContest, findContestBySlug } from '@/lib/db/contests'
 import { prisma } from '@/lib/prisma'
+import { authenticateRequest } from '@/lib/auth'
 
 // TEMPORARY: Set to true to skip Shopify connection requirement
 const SKIP_SHOPIFY_CHECK = true;
@@ -11,10 +11,10 @@ export async function POST(
   { params }: { params: Promise<{ contestId: string }> }
 ) {
   try {
-    // Verify user authentication
-    const { userId: whopUserId } = await verifyUserToken(request.headers)
+    // Verify user authentication using unified system
+    const authResult = await authenticateRequest(request)
     
-    if (!whopUserId) {
+    if (!authResult.success || !authResult.userId) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
@@ -24,18 +24,7 @@ export async function POST(
     const body = await request.json().catch(() => ({}))
     const { storeId: requestedStoreId } = body
 
-    // Find the user record using Whop user ID
-    const user = await prisma.user.findUnique({
-      where: { whopUserId: whopUserId }
-    })
-
-    if (!user) {
-      return NextResponse.json({ 
-        error: 'User not found. Please contact support.' 
-      }, { status: 404 })
-    }
-
-    const userId = user.id // Use internal user ID for database queries
+    const userId = authResult.userId // Use internal user ID for database queries
 
     // Get contest details
     const contest = await prisma.contest.findUnique({

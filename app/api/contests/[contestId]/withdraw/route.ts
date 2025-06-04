@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyUserToken } from "@whop/api";
 import { prisma } from "@/lib/prisma";
+import { authenticateRequest } from "@/lib/auth";
 
 export async function DELETE(
   request: NextRequest,
@@ -9,24 +9,14 @@ export async function DELETE(
   try {
     const { contestId } = await params;
 
-    // Verify user authentication
-    const { userId: whopUserId } = await verifyUserToken(request.headers);
+    // Verify user authentication using unified system
+    const authResult = await authenticateRequest(request);
     
-    if (!whopUserId) {
+    if (!authResult.success || !authResult.userId) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    // Find the user record using Whop user ID
-    const user = await prisma.user.findUnique({
-      where: { whopUserId: whopUserId }
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
-    }
+    const userId = authResult.userId;
 
     // Get the contest and check if it hasn't started yet
     const contest = await prisma.contest.findUnique({
@@ -44,7 +34,7 @@ export async function DELETE(
     }
 
     // Check if user is actually participating
-    const existingParticipant = contest.participants.find(p => p.userId === user.id);
+    const existingParticipant = contest.participants.find(p => p.userId === userId);
     if (!existingParticipant) {
       return NextResponse.json(
         { error: "You are not participating in this contest" },
@@ -65,7 +55,7 @@ export async function DELETE(
     await prisma.contestParticipant.deleteMany({
       where: {
         contestId: contestId,
-        userId: user.id
+        userId: userId
       }
     });
 
