@@ -9,6 +9,7 @@ import { ContestJoinButton } from "@/components/contest/contest-join-button"
 import { Card, CardContent } from "@/components/ui/card"
 import { whopApi } from "@/lib/whop-api"
 import { prisma } from "@/lib/prisma"
+import { getSessionFromCookies } from "@/lib/auth"
 
 interface ContestPageProps {
   params: Promise<{ 
@@ -26,10 +27,22 @@ export default async function ContestPage({ params }: ContestPageProps) {
     notFound()
   }
 
+  // Get user session from cookies (for external users) - EXACT COPY FROM MAIN PAGE
+  const session = await getSessionFromCookies()
+  const user = session?.user
+
   // Check if user is authenticated (optional for public contests)
   const headersList = await headers()
   const userToken = headersList.get('x-whop-user-token')
-  const { userId } = await verifyUserToken(headersList)
+  let userId = null
+  
+  try {
+    const result = await verifyUserToken(headersList)
+    userId = result.userId
+  } catch (error) {
+    // User is not authenticated - this is OK for public contests
+    console.log("User not authenticated (this is OK for public contests)")
+  }
 
   // Verify user has access to this experience if authenticated
   if (userId) {
@@ -48,14 +61,14 @@ export default async function ContestPage({ params }: ContestPageProps) {
   }
 
   // Get user data if authenticated
-  let user = null
+  let whopUser = null
   let internalUserId = null
   if (userId) {
     try {
-      const whopUser = await whopApi.getUser({ userId })
-      const publicUser = whopUser.publicUser
+      const whopUserData = await whopApi.getUser({ userId })
+      const publicUser = whopUserData.publicUser
       if (publicUser) {
-        user = {
+        whopUser = {
           name: publicUser.name || undefined,
           username: publicUser.username
         }
@@ -120,7 +133,7 @@ export default async function ContestPage({ params }: ContestPageProps) {
     try {
       for (const participant of contest.participants) {
         const user = participant.user;
-        if (user.username === `user-${user.whopUserId}`) {
+        if (user.whopUserId && user.username === `user-${user.whopUserId}`) {
           try {
             // Fetch real username from Whop
             const whopUser = await whopApi.getUser({ userId: user.whopUserId });
@@ -170,7 +183,7 @@ export default async function ContestPage({ params }: ContestPageProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50">
       <Header 
-        user={user || undefined}
+        user={user || whopUser}
         experienceId={experienceId}
         showBackButton={true}
         backHref={`/experiences/${experienceId}?view=list`}
@@ -199,14 +212,14 @@ export default async function ContestPage({ params }: ContestPageProps) {
               userId={internalUserId || undefined}
               isParticipating={isParticipating}
               experienceId={experienceId}
-              userToken={userToken}
+              userToken={userToken || undefined}
             />
 
             <div className="p-6">
               <ContestLeaderboard 
                 contest={contest}
                 participants={participantsForLeaderboard}
-                currentUserId={userId || undefined}
+                currentUserId={internalUserId || undefined}
               />
             </div>
           </div>

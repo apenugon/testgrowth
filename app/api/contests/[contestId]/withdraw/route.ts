@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { authenticateRequest } from "@/lib/auth";
+import { getSessionFromCookies } from "@/lib/auth";
 
 export async function DELETE(
   request: NextRequest,
@@ -9,14 +9,14 @@ export async function DELETE(
   try {
     const { contestId } = await params;
 
-    // Verify user authentication using unified system
-    const authResult = await authenticateRequest(request);
+    // Verify user authentication using same approach as Shopify connections
+    const sessionResult = await getSessionFromCookies();
     
-    if (!authResult.success || !authResult.userId) {
+    if (!sessionResult) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    const userId = authResult.userId;
+    const userId = sessionResult.userId;
 
     // Get the contest and check if it hasn't started yet
     const contest = await prisma.contest.findUnique({

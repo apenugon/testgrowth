@@ -24,33 +24,31 @@ export default async function ContestPage({ params }: ContestPageProps) {
     notFound()
   }
 
-  // Check authentication using unified system - use same approach as Shopify connections
+  // Get user session from cookies (for external users) - EXACT COPY FROM MAIN PAGE
+  const session = await getSessionFromCookies()
+  const user = session?.user
+
+  // For Whop iframe users, also check Whop token
   const headersList = await headers()
   const userToken = headersList.get('x-whop-user-token')
-  const sessionResult = await getSessionFromCookies()
-  
-  // Variables for user data  
-  let user = null
+  let whopUser = null
   let experienceId = null
   let internalUserId = null
-  let userId = null // This will be the session userId for API calls, just like Shopify connections
   
-  // If we have a session (external user), use that - same as Shopify connections page
-  if (sessionResult) {
-    user = sessionResult.user
-    internalUserId = sessionResult.userId
-    userId = sessionResult.userId // Use session userId for API calls, same as Shopify connections
+  // If we have a session (external user), use that
+  if (session) {
+    internalUserId = session.userId
   }
   
-  // Try Whop authentication for iframe users (but still set internalUserId)
-  if (userToken && !sessionResult) {
+  // For Whop iframe users only
+  if (userToken && !session) {
     try {
       const { userId: whopUserId } = await verifyUserToken(headersList)
       if (whopUserId) {        
-        const whopUser = await whopApi.getUser({ userId: whopUserId })
-        const publicUser = whopUser.publicUser
+        const whopUserData = await whopApi.getUser({ userId: whopUserId })
+        const publicUser = whopUserData.publicUser
         if (publicUser) {
-          user = {
+          whopUser = {
             name: publicUser.name || undefined,
             username: publicUser.username
           }
@@ -62,7 +60,6 @@ export default async function ContestPage({ params }: ContestPageProps) {
         })
         if (dbUser) {
           internalUserId = dbUser.id
-          userId = dbUser.id // Use internal DB ID for API calls, same as session users
           
           // Update user record with latest Whop username if different
           if (dbUser.username !== publicUser.username) {
@@ -85,7 +82,6 @@ export default async function ContestPage({ params }: ContestPageProps) {
             }
           })
           internalUserId = newUser.id
-          userId = newUser.id // Use internal DB ID for API calls
         }
 
         // Check if we can get experience ID from headers or context
@@ -181,7 +177,7 @@ export default async function ContestPage({ params }: ContestPageProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50">
       <Header 
-        user={user || undefined}
+        user={user}
         experienceId={experienceId || undefined}
         showBackButton={true}
         backHref={backHref}
@@ -207,7 +203,7 @@ export default async function ContestPage({ params }: ContestPageProps) {
                 isPublic: contest.isPublic,
                 participants: contest.participants.map(p => ({ userId: p.userId })),
               }}
-              userId={userId}
+              userId={internalUserId}
               isParticipating={isParticipating}
               experienceId={experienceId}
               userToken={userToken}
@@ -217,7 +213,7 @@ export default async function ContestPage({ params }: ContestPageProps) {
               <ContestLeaderboard 
                 contest={contest}
                 participants={participantsForLeaderboard}
-                currentUserId={userId}
+                currentUserId={internalUserId}
               />
             </div>
           </div>
