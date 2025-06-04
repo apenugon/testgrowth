@@ -8,6 +8,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { 
@@ -16,7 +17,8 @@ import {
   Menu,
   Settings,
   ShoppingBag,
-  Shield
+  Shield,
+  LogOut
 } from "lucide-react"
 import { useState } from "react"
 
@@ -49,6 +51,23 @@ export function Header({
 
   const homeHref = experienceId ? `/experiences/${experienceId}` : "/"
 
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+      })
+
+      if (response.ok) {
+        // Redirect to home page after logout
+        window.location.href = '/'
+      } else {
+        console.error('Logout failed')
+      }
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
+  }
+
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -77,7 +96,7 @@ export function Header({
           {/* Right side - User info and dropdown */}
           <div className="flex items-center space-x-3">
             {/* User info with dropdown */}
-            {user && (
+            {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="flex items-center space-x-2 p-2 hover:bg-gray-100 data-[state=open]:bg-gray-100 rounded-md">
@@ -135,10 +154,31 @@ export function Header({
                           {isCreatorMode ? 'Switch to competitor mode' : 'Switch to creator mode'}
                         </DropdownMenuItem>
                       )}
+                      
+                      <DropdownMenuSeparator />
                     </>
                   )}
+                  
+                  {/* Logout option */}
+                  <DropdownMenuItem 
+                    onClick={handleLogout}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Log out
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+            ) : (
+              // Show Login/Register buttons for non-authenticated users  
+              <div className="flex items-center space-x-2">
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href="/login">Log in</Link>
+                </Button>
+                <Button size="sm" asChild>
+                  <Link href="/register">Sign up</Link>
+                </Button>
+              </div>
             )}
 
             {/* Mobile menu button - only show if needed for other content */}
