@@ -88,10 +88,14 @@ export function ContestPageHeader({
     }
   };
 
-  const isJoinable = !isParticipating && timeStatus !== 'ended' && userId;
+  // Allow button to be clickable even without userId (for install modal)
+  const isJoinable = !isParticipating && timeStatus !== 'ended';
+  const requiresAuth = isJoinable && !userId;
 
   // Fetch user's Shopify stores - same as ShopifyConnectionsClient
   const fetchStores = async () => {
+    if (!userId) return []; // No user, no stores
+    
     setCheckingStores(true);
     try {
       const response = await fetch(`/api/stores/all/${userId}`)
@@ -241,7 +245,14 @@ export function ContestPageHeader({
   };
 
   const handleJoinClick = async () => {
-    if (!userId || !isJoinable) return;
+    if (!isJoinable) return;
+
+    // If not authenticated, show install modal
+    if (!userId) {
+      console.log('User not authenticated, showing install modal');
+      setShowInstallModal(true);
+      return;
+    }
 
     console.log('Join button clicked, fetching stores...');
     setCheckingStores(true);
@@ -402,15 +413,15 @@ export function ContestPageHeader({
               size="lg"
               className="px-12 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all w-full cursor-pointer"
               onClick={handleJoinClick}
-              disabled={!isJoinable || checkingStores || isJoining}
+              disabled={!isJoinable || (!!userId && (checkingStores || isJoining))}
               variant={isParticipating ? "outline" : timeStatus === 'ended' ? "outline" : "default"}
             >
-              {checkingStores ? (
+              {!!userId && checkingStores ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                   Checking stores...
                 </>
-              ) : isJoining ? (
+              ) : !!userId && isJoining ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                   Joining contest...
