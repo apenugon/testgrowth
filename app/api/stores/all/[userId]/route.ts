@@ -51,7 +51,7 @@ export async function GET(
         createdAt: 'desc'
       }
     })
-    
+
     // Transform the data to include active contests info
     const storesWithActiveContests = stores.map(store => {
       const now = new Date()

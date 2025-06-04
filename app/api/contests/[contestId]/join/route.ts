@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { joinContest, findContestBySlug } from '@/lib/db/contests'
 import { prisma } from '@/lib/prisma'
-import { authenticateRequest } from '@/lib/auth'
+import { getSessionFromCookies } from '@/lib/auth'
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ contestId: string }> }
 ) {
   try {
-    // Verify user authentication using unified system
-    const authResult = await authenticateRequest(request)
+    // Verify user authentication using same approach as Shopify connections
+    const sessionResult = await getSessionFromCookies()
     
-    if (!authResult.success || !authResult.userId) {
+    if (!sessionResult) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
@@ -21,7 +21,7 @@ export async function POST(
     const body = await request.json().catch(() => ({}))
     const { storeId: requestedStoreId } = body
 
-    const userId = authResult.userId // Use internal user ID for database queries
+    const userId = sessionResult.userId // Use session userId, same as stores API
 
     // Get contest details
     const contest = await prisma.contest.findUnique({

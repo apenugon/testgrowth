@@ -106,7 +106,7 @@ export default async function ContestPage({ params }: ContestPageProps) {
   // Transform contest data to match component types
   const participantsForLeaderboard = contest.participants.map(p => ({
     id: p.contestId,
-    userId: p.user.whopUserId,
+    userId: p.user.whopUserId || p.userId,
     totalSales: p.totalSales,
     orderCount: p.orderCount,
     user: {
@@ -196,7 +196,7 @@ export default async function ContestPage({ params }: ContestPageProps) {
                 isPublic: contest.isPublic,
                 participants: contest.participants.map(p => ({ userId: p.userId })),
               }}
-              userId={userId}
+              userId={internalUserId || undefined}
               isParticipating={isParticipating}
               experienceId={experienceId}
               userToken={userToken}
@@ -206,7 +206,7 @@ export default async function ContestPage({ params }: ContestPageProps) {
               <ContestLeaderboard 
                 contest={contest}
                 participants={participantsForLeaderboard}
-                currentUserId={userId}
+                currentUserId={userId || undefined}
               />
             </div>
           </div>

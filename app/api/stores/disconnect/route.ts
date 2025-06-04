@@ -4,19 +4,26 @@ import { prisma } from "@/lib/prisma"
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { userId: whopUserId, storeId } = body
+    const { userId, storeId } = body
 
-    if (!whopUserId) {
+    if (!userId) {
       return NextResponse.json(
         { error: "User ID is required" },
         { status: 400 }
       )
     }
 
-    // Find the user record using Whop user ID
-    const user = await prisma.user.findUnique({
-      where: { whopUserId: whopUserId }
+    // Try to find user by internal ID first, then by Whop user ID
+    let user = await prisma.user.findUnique({
+      where: { id: userId }
     })
+
+    // If not found by internal ID, try Whop user ID
+    if (!user) {
+      user = await prisma.user.findUnique({
+        where: { whopUserId: userId }
+      })
+    }
 
     if (!user) {
       return NextResponse.json(
@@ -24,6 +31,12 @@ export async function POST(request: Request) {
         { status: 404 }
       )
     }
+
+    console.log('Disconnect request:', { 
+      inputUserId: userId, 
+      foundUser: user.id, 
+      storeId 
+    })
 
     if (storeId) {
       // Disconnect specific store
@@ -81,6 +94,13 @@ export async function POST(request: Request) {
       // Then delete the store
       await prisma.shopifyStore.delete({
         where: { id: storeId }
+      })
+
+      console.log('Store disconnected successfully:', {
+        storeId,
+        shopDomain: store.shopDomain,
+        userId: user.id,
+        affectedContests: affectedContests.length
       })
 
       return NextResponse.json({
@@ -145,6 +165,12 @@ export async function POST(request: Request) {
         where: {
           userId: user.id
         }
+      })
+
+      console.log('All stores disconnected:', {
+        userId: user.id,
+        deletedCount: deletedStores.count,
+        affectedContests: uniqueAffectedContests.length
       })
 
       return NextResponse.json({

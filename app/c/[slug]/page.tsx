@@ -24,23 +24,29 @@ export default async function ContestPage({ params }: ContestPageProps) {
     notFound()
   }
 
-  // Check authentication using unified system
+  // Check authentication using unified system - use same approach as Shopify connections
   const headersList = await headers()
   const userToken = headersList.get('x-whop-user-token')
+  const sessionResult = await getSessionFromCookies()
   
-  // Variables for user data
+  // Variables for user data  
   let user = null
   let experienceId = null
   let internalUserId = null
-  let userId = null // Whop user ID for iframe users
+  let userId = null // This will be the session userId for API calls, just like Shopify connections
   
-  // Try Whop authentication first (for iframe users)
-  if (userToken) {
+  // If we have a session (external user), use that - same as Shopify connections page
+  if (sessionResult) {
+    user = sessionResult.user
+    internalUserId = sessionResult.userId
+    userId = sessionResult.userId // Use session userId for API calls, same as Shopify connections
+  }
+  
+  // Try Whop authentication for iframe users (but still set internalUserId)
+  if (userToken && !sessionResult) {
     try {
       const { userId: whopUserId } = await verifyUserToken(headersList)
-      if (whopUserId) {
-        userId = whopUserId
-        
+      if (whopUserId) {        
         const whopUser = await whopApi.getUser({ userId: whopUserId })
         const publicUser = whopUser.publicUser
         if (publicUser) {
@@ -56,6 +62,7 @@ export default async function ContestPage({ params }: ContestPageProps) {
         })
         if (dbUser) {
           internalUserId = dbUser.id
+          userId = dbUser.id // Use internal DB ID for API calls, same as session users
           
           // Update user record with latest Whop username if different
           if (dbUser.username !== publicUser.username) {
@@ -78,6 +85,7 @@ export default async function ContestPage({ params }: ContestPageProps) {
             }
           })
           internalUserId = newUser.id
+          userId = newUser.id // Use internal DB ID for API calls
         }
 
         // Check if we can get experience ID from headers or context
@@ -88,21 +96,6 @@ export default async function ContestPage({ params }: ContestPageProps) {
       }
     } catch (error) {
       console.error("Error fetching Whop user data:", error)
-    }
-  }
-  
-  // Try session cookie authentication (for external users)
-  if (!internalUserId) {
-    try {
-      const sessionResult = await getSessionFromCookies()
-      if (sessionResult) {
-        user = sessionResult.user
-        internalUserId = sessionResult.userId
-        // For external users, we use the internal user ID as their identifier
-        userId = sessionResult.userId
-      }
-    } catch (error) {
-      console.error("Error fetching session data:", error)
     }
   }
 
@@ -214,7 +207,7 @@ export default async function ContestPage({ params }: ContestPageProps) {
                 isPublic: contest.isPublic,
                 participants: contest.participants.map(p => ({ userId: p.userId })),
               }}
-              userId={userId || undefined}
+              userId={userId}
               isParticipating={isParticipating}
               experienceId={experienceId}
               userToken={userToken}

@@ -7,6 +7,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -15,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ShoppingBag, Clock } from "lucide-react";
+import { ShoppingBag, Clock, Download, ExternalLink } from "lucide-react";
 import { formatCurrency, formatDate, getContestTimeStatus } from "@/lib/utils";
 
 type Contest = {
@@ -55,6 +56,7 @@ export function ContestPageHeader({
   userToken 
 }: ContestPageHeaderProps) {
   const [showJoinModal, setShowJoinModal] = useState(false);
+  const [showInstallModal, setShowInstallModal] = useState(false);
   const [stores, setStores] = useState<ShopifyStore[]>([]);
   const [selectedStoreId, setSelectedStoreId] = useState<string>("");
   const [checkingStores, setCheckingStores] = useState(false);
@@ -88,7 +90,7 @@ export function ContestPageHeader({
 
   const isJoinable = !isParticipating && timeStatus !== 'ended' && userId;
 
-  // Fetch user's Shopify stores
+  // Fetch user's Shopify stores - same as ShopifyConnectionsClient
   const fetchStores = async () => {
     setCheckingStores(true);
     try {
@@ -242,20 +244,61 @@ export function ContestPageHeader({
     if (!userId || !isJoinable) return;
 
     console.log('Join button clicked, fetching stores...');
+    setCheckingStores(true);
+    
     // Fetch stores first
     const fetchedStores = await fetchStores();
+    setCheckingStores(false);
     
     console.log('Stores fetched:', fetchedStores.length);
-    // If user has no stores, prompt them to connect one
+    
     if (fetchedStores.length === 0) {
-      console.log('No stores found, prompting user to connect store');
-      handleAddStore();
+      // No stores - show install modal
+      console.log('No stores found, showing install modal');
+      setShowInstallModal(true);
       return;
-    }
+    } else if (fetchedStores.length === 1) {
+      // One store - auto-join with that store
+      console.log('One store found, auto-joining with:', fetchedStores[0].shopDomain);
+      setSelectedStoreId(fetchedStores[0].id);
+      // Auto-join immediately
+      setIsJoining(true);
+      setError(null);
 
-    console.log('User has stores, showing modal');
-    // If user has stores, show modal for selection
-    setShowJoinModal(true);
+      try {
+        const response = await fetch(`/api/contests/${contest.id}/join`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            storeId: fetchedStores[0].id
+          }),
+        });
+
+        if (response.ok) {
+          // Refresh the page to update participation status
+          window.location.reload();
+        } else {
+          const errorData = await response.json();
+          setError(errorData.error || 'Failed to join contest');
+        }
+      } catch (err) {
+        console.error('Error joining contest:', err);
+        setError('An unexpected error occurred');
+      } finally {
+        setIsJoining(false);
+      }
+    } else {
+      // Multiple stores - show selection modal
+      console.log('Multiple stores found, showing selection modal');
+      setShowJoinModal(true);
+    }
+  };
+
+  const handleInstallApp = () => {
+    // Redirect to Shopify App Store
+    window.location.href = 'https://apps.shopify.com/growth-arena';
   };
 
   const handleWithdraw = async () => {
@@ -359,10 +402,22 @@ export function ContestPageHeader({
               size="lg"
               className="px-12 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all w-full cursor-pointer"
               onClick={handleJoinClick}
-              disabled={!isJoinable || checkingStores}
+              disabled={!isJoinable || checkingStores || isJoining}
               variant={isParticipating ? "outline" : timeStatus === 'ended' ? "outline" : "default"}
             >
-              {checkingStores ? "Loading..." : getJoinButtonContent()}
+              {checkingStores ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Checking stores...
+                </>
+              ) : isJoining ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Joining contest...
+                </>
+              ) : (
+                getJoinButtonContent()
+              )}
             </Button>
           )}
         </div>
@@ -446,6 +501,43 @@ export function ContestPageHeader({
             >
               <ShoppingBag className="w-4 h-4 mr-2" />
               Connect Different Store
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Install App Modal */}
+      <Dialog open={showInstallModal} onOpenChange={setShowInstallModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Download className="w-5 h-5 text-emerald-600" />
+              <span>Install Growth Arena App</span>
+            </DialogTitle>
+            <DialogDescription className="text-left space-y-3 pt-2">
+              <p>
+                Before joining this contest, you need to install the Growth Arena app from the Shopify App Store.
+              </p>
+              <p className="text-sm text-gray-600">
+                After installation, you'll be redirected back here to complete joining the contest.
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col space-y-3 pt-4">
+            <Button 
+              onClick={handleInstallApp}
+              className="w-full"
+              size="lg"
+            >
+              <ExternalLink className="w-4 h-4 mr-2" />
+              Install from Shopify App Store
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowInstallModal(false)}
+              className="w-full"
+            >
+              Cancel
             </Button>
           </div>
         </DialogContent>
