@@ -1,7 +1,11 @@
+import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { getSessionFromCookies } from "@/lib/auth"
 import { Header } from "@/components/layout/header"
+import { Footer } from "@/components/layout/footer"
 import { ShopifyConnectionsClient } from "./shopify-connections-client"
+
+export const dynamic = 'force-dynamic'
 
 export default async function ShopifyConnectionsPage() {
   // Check authentication using unified system

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, Suspense } from "react"
+import { useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -11,83 +11,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import { Trophy, Eye, EyeOff, ShoppingBag, CheckCircle } from "lucide-react"
-
-export default function LoginPage() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  
-  // Check if this is from Shopify app installation
-  const isFromShopifyInstall = searchParams.get('shopify') === 'install'
-  const shopDomain = searchParams.get('shop')
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError("")
-
-    try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        
-        // If from Shopify install, redirect to connections page
-        if (isFromShopifyInstall) {
-          if (shopDomain) {
-            // Auto-connect to specific shop
-            const connectUrl = new URL('/connect-shopify', window.location.origin)
-            connectUrl.searchParams.set('shop', shopDomain)
-            connectUrl.searchParams.set('auto', 'true')
-            window.location.href = connectUrl.toString()
-          } else {
-            // Manual connection
-            window.location.href = '/shopify-connections'
-          }
-        } else {
-          // Redirect to the page they were trying to access or home
-          const redirect = searchParams.get('redirect') || '/'
-          window.location.href = redirect
-        }
-      } else {
-        const data = await response.json()
-        setError(data.error || "Login failed")
-      }
-    } catch (err) {
-      setError("Network error. Please try again.")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 flex flex-col">
-      <Header user={undefined} />
-      
-      <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 flex-1">
-        <Suspense fallback={
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
-          </div>
-        }>
-          <LoginForm />
-        </Suspense>
-      </div>
-      
-      <Footer />
-    </div>
-  )
-}
 
 function LoginForm() {
   const [email, setEmail] = useState("")
@@ -286,6 +209,26 @@ function LoginForm() {
           By signing in, you agree to participate in our sales contests and competition platform.
         </p>
       </div>
+    </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 flex flex-col">
+      <Header user={undefined} />
+      
+      <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 flex-1">
+        <Suspense fallback={
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+          </div>
+        }>
+          <LoginForm />
+        </Suspense>
+      </div>
+      
+      <Footer />
     </div>
   )
 } 

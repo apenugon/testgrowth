@@ -3,6 +3,8 @@ import { redirect } from "next/navigation"
 import { getSessionFromCookies } from "@/lib/auth"
 import { ShopifyConnectionFlow } from "./shopify-connection-flow"
 
+export const dynamic = 'force-dynamic'
+
 export default async function ConnectShopifyPage({
   searchParams,
 }: {

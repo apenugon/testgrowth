@@ -5,6 +5,8 @@ import { verifyUserToken } from "@whop/api"
 import { whopApi } from "@/lib/whop-api"
 import { ShopifyConnectionFlow } from "./shopify-connection-flow"
 
+export const dynamic = 'force-dynamic'
+
 export default async function ConnectShopifyPage({
   params,
   searchParams,

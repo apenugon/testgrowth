@@ -12,6 +12,8 @@ import { whopApi } from "@/lib/whop-api"
 import { prisma } from "@/lib/prisma"
 import { getSessionFromCookies } from "@/lib/auth"
 
+export const dynamic = 'force-dynamic'
+
 interface ContestPageProps {
   params: Promise<{ slug: string }>
 }

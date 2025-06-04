@@ -7,6 +7,8 @@ import { prisma } from "@/lib/prisma"
 import { getSessionFromCookies } from "@/lib/auth"
 import { createHmac } from "crypto"
 
+export const dynamic = 'force-dynamic'
+
 interface PageProps {
   searchParams: { 
     view?: string 

@@ -6,6 +6,8 @@ import { whopApi } from "@/lib/whop-api"
 import { Header } from "@/components/layout/header"
 import { ShopifyConnectionsClient } from "./shopify-connections-client"
 
+export const dynamic = 'force-dynamic'
+
 export default async function ShopifyConnectionsPage({
   params,
 }: {
