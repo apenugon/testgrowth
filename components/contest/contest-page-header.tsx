@@ -18,9 +18,6 @@ import {
 import { ShoppingBag, Clock } from "lucide-react";
 import { formatCurrency, formatDate, getContestTimeStatus } from "@/lib/utils";
 
-// TEMPORARY: Set to true to skip Shopify connection requirement
-const SKIP_SHOPIFY_CHECK = true;
-
 type Contest = {
   id: string;
   name: string;
@@ -123,8 +120,8 @@ export function ContestPageHeader({
   const handleAddStore = () => {
     // Open connection page in popup
     const connectUrl = experienceId 
-      ? `/experiences/${experienceId}/connect-shopify?returnTo=/experiences/${experienceId}/contest/${contest.slug}&popup=true`
-      : `/connect-shopify?returnTo=/contest/${contest.slug}&popup=true`;
+      ? `/experiences/${experienceId}/connect-shopify?returnTo=/c/${contest.slug}&popup=true`
+      : `/connect-shopify?returnTo=/c/${contest.slug}&popup=true`;
 
     const popup = window.open(
       connectUrl,
@@ -151,7 +148,7 @@ export function ContestPageHeader({
         // Automatically join the contest with the newly connected store
         try {
           console.log('Refreshing stores list...');
-          // Refresh the stores list (same as working Shopify connections page)
+          // Refresh the stores list
           const stores = await fetchStores();
           
           console.log('Stores after refresh:', stores.length);
@@ -209,34 +206,33 @@ export function ContestPageHeader({
   };
 
   const handleJoin = async () => {
+    if (!userId || !selectedStoreId) return;
+
     setIsJoining(true);
     setError(null);
 
     try {
-      const requestBody: any = {};
-      
-      // Only include storeId if not skipping Shopify checks
-      if (!SKIP_SHOPIFY_CHECK) {
-        requestBody.storeId = selectedStoreId || stores[0]?.id;
-      }
-
       const response = await fetch(`/api/contests/${contest.id}/join`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify({
+          storeId: selectedStoreId
+        }),
       });
 
-      if (!response.ok) {
+      if (response.ok) {
+        setShowJoinModal(false);
+        // Refresh the page to update participation status
+        window.location.reload();
+      } else {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to join contest');
+        setError(errorData.error || 'Failed to join contest');
       }
-
-      // Refresh the page to update participation status
-      window.location.reload();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      console.error('Error joining contest:', err);
+      setError('An unexpected error occurred');
     } finally {
       setIsJoining(false);
     }
@@ -245,22 +241,14 @@ export function ContestPageHeader({
   const handleJoinClick = async () => {
     if (!userId || !isJoinable) return;
 
-    // TEMPORARY: Skip Shopify checks if flag is set
-    if (SKIP_SHOPIFY_CHECK) {
-      // Skip all Shopify-related checks and join directly
-      await handleJoin();
-      return;
-    }
-
-    // Original Shopify-dependent logic
     console.log('Join button clicked, fetching stores...');
     // Fetch stores first
     const fetchedStores = await fetchStores();
     
     console.log('Stores fetched:', fetchedStores.length);
-    // If user has no stores, go straight to OAuth
+    // If user has no stores, prompt them to connect one
     if (fetchedStores.length === 0) {
-      console.log('No stores found, opening OAuth popup');
+      console.log('No stores found, prompting user to connect store');
       handleAddStore();
       return;
     }

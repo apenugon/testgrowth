@@ -6,12 +6,19 @@ export async function GET(
   { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const { userId: whopUserId } = await params
+    const { userId } = await params
     
-    // Find the user record using Whop user ID
-    const user = await prisma.user.findUnique({
-      where: { whopUserId: whopUserId }
+    // Try to find user by internal ID first, then by Whop user ID
+    let user = await prisma.user.findUnique({
+      where: { id: userId }
     })
+
+    // If not found by internal ID, try Whop user ID
+    if (!user) {
+      user = await prisma.user.findUnique({
+        where: { whopUserId: userId }
+      })
+    }
 
     if (!user) {
       // User doesn't exist in our database yet
@@ -75,6 +82,7 @@ export async function GET(
     })
     
   } catch (error) {
+    console.error("Error fetching stores:", error)
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

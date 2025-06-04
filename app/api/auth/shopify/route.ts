@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { redirect } from "next/navigation"
+import { prisma } from "@/lib/prisma"
 
 export async function GET(request: Request) {
   try {
@@ -10,10 +11,46 @@ export async function GET(request: Request) {
     const returnTo = searchParams.get('returnTo')
     const isPopup = searchParams.get('popup') === 'true'
 
-    if (!shop) {
+    if (!shop || !userId) {
       return NextResponse.json(
-        { error: "Shop parameter is required" },
+        { error: "Shop and userId parameters are required" },
         { status: 400 }
+      )
+    }
+
+    // Determine if this is a Whop user or external user
+    let isWhopUser = false
+    try {
+      // Check if the user exists as a Whop user
+      const whopUser = await prisma.user.findUnique({
+        where: { whopUserId: userId },
+        select: { id: true }
+      })
+      
+      if (whopUser) {
+        isWhopUser = true
+      } else {
+        // Check if it's an internal user ID
+        const externalUser = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { whopUserId: true }
+        })
+        
+        if (!externalUser) {
+          return NextResponse.json(
+            { error: "User not found" },
+            { status: 404 }
+          )
+        }
+        
+        // If the user has a whopUserId, they're a Whop user
+        isWhopUser = !!externalUser.whopUserId
+      }
+    } catch (error) {
+      console.error('Error checking user type:', error)
+      return NextResponse.json(
+        { error: "Failed to verify user" },
+        { status: 500 }
       )
     }
 
@@ -44,7 +81,8 @@ export async function GET(request: Request) {
       experienceId,
       returnTo,
       timestamp: Date.now(),
-      popup: isPopup
+      popup: isPopup,
+      isWhopUser
     }))
 
     // Build Shopify OAuth URL

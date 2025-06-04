@@ -159,6 +159,20 @@ export function Header({
                     </>
                   )}
                   
+                  {/* Shopify Connections for external users */}
+                  {!experienceId && (
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link href="/shopify-connections">
+                          <ShoppingBag className="w-4 h-4 mr-2" />
+                          Shopify Connections
+                        </Link>
+                      </DropdownMenuItem>
+                      
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+                  
                   {/* Logout option */}
                   <DropdownMenuItem 
                     onClick={handleLogout}

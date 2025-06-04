@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { getSessionFromCookies } from "@/lib/auth"
 
 // Helper function to ensure proper URL format
 function getBaseUrl(): string {
@@ -41,7 +42,7 @@ export async function GET(request: Request) {
       )
     }
 
-    const { userId: whopUserId, experienceId, returnTo } = stateData
+    const { userId, experienceId, returnTo, isWhopUser } = stateData
 
     // Required environment variables
     const apiKey = process.env.SHOPIFY_APP_API_KEY
@@ -50,7 +51,9 @@ export async function GET(request: Request) {
     console.log('Environment check:', { 
       hasApiKey: !!apiKey, 
       hasApiSecret: !!apiSecret,
-      shop 
+      shop,
+      userId,
+      isWhopUser
     })
 
     if (!apiKey || !apiSecret) {
@@ -99,53 +102,110 @@ export async function GET(request: Request) {
       shopName = shopInfo.shop?.name || shop
     }
 
-    // Find or create the user record
-    console.log('Finding/creating user record for:', whopUserId)
+    // Check if user is currently authenticated (different from the state userId)
+    let currentUser = null
+    let createTempUser = false
     
-    // Get user info from Whop API to get real username
-    let whopUsername = whopUserId; // fallback
-    let whopName = null;
     try {
-      const { whopApi } = await import('@/lib/whop-api');
-      const whopUser = await whopApi.getUser({ userId: whopUserId });
-      if (whopUser.publicUser) {
-        whopUsername = whopUser.publicUser.username;
-        whopName = whopUser.publicUser.name;
+      const sessionResult = await getSessionFromCookies()
+      if (sessionResult) {
+        currentUser = sessionResult
+        console.log('Current authenticated user found:', currentUser.userId)
+      } else {
+        console.log('No current authenticated user, will create temporary user')
+        createTempUser = true
       }
     } catch (error) {
-      console.error('Failed to fetch Whop user info:', error);
+      console.log('No session found, will create temporary user')
+      createTempUser = true
     }
-    
-    let user = await prisma.user.findUnique({
-      where: { whopUserId: whopUserId }
-    })
 
-    if (!user) {
-      console.log('User not found, creating new user...')
+    let user;
+    let tempUserId = null;
+    
+    if (createTempUser) {
+      // Create a temporary user for the OAuth flow
+      console.log('Creating temporary user for store connection...')
       user = await prisma.user.create({
         data: {
-          whopUserId: whopUserId,
-          email: `${whopUserId}@whop.user`,
-          username: whopUsername,
-          name: whopName,
+          email: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}@temp.user`,
+          username: `temp-user-${Date.now()}`,
+          name: `Temporary User`,
         }
       })
-      console.log('New user created:', user.id)
-    } else {
-      console.log('Existing user found:', user.id)
+      tempUserId = user.id
+      console.log('Temporary user created:', user.id)
+    } else if (currentUser) {
+      // Use the current authenticated user
+      user = await prisma.user.findUnique({
+        where: { id: currentUser.userId }
+      })
       
-      // Update username if it's different (sync with Whop)
-      if (user.username !== whopUsername || user.name !== whopName) {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: {
-            username: whopUsername,
-            name: whopName,
+      if (!user) {
+        throw new Error('Authenticated user not found in database')
+      }
+      
+      console.log('Using current authenticated user:', user.id, 'email:', user.email)
+    } else {
+      // Fallback: try to find/create user based on state
+      if (isWhopUser) {
+        // Handle Whop user
+        let whopUsername = userId; // fallback
+        let whopName = null;
+        try {
+          const { whopApi } = await import('@/lib/whop-api');
+          const whopUser = await whopApi.getUser({ userId });
+          if (whopUser.publicUser) {
+            whopUsername = whopUser.publicUser.username;
+            whopName = whopUser.publicUser.name;
           }
+        } catch (error) {
+          console.error('Failed to fetch Whop user info:', error);
+        }
+        
+        user = await prisma.user.findUnique({
+          where: { whopUserId: userId }
         })
-        console.log('User updated with latest Whop info')
+
+        if (!user) {
+          console.log('Whop user not found, creating new user...')
+          user = await prisma.user.create({
+            data: {
+              whopUserId: userId,
+              email: `${userId}@whop.user`,
+              username: whopUsername,
+              name: whopName,
+            }
+          })
+          console.log('New Whop user created:', user.id)
+        } else {
+          console.log('Existing Whop user found:', user.id)
+        }
+      } else {
+        // Handle external user from state
+        user = await prisma.user.findUnique({
+          where: { id: userId }
+        })
+
+        if (!user) {
+          console.error('External user not found:', userId)
+          throw new Error('User not found. Please ensure you are logged in.')
+        }
+        
+        console.log('External user found:', user.id, 'email:', user.email)
       }
     }
+
+    if (!user) {
+      throw new Error('Failed to find or create user for store connection')
+    }
+
+    console.log('Final user for store connection:', { 
+      id: user.id, 
+      email: user.email, 
+      whopUserId: user.whopUserId,
+      shop: shop
+    })
 
     // Check if store is already connected by ANY user (prevent duplicate connections)
     console.log('Checking if store is already connected by any user...')
@@ -179,7 +239,7 @@ export async function GET(request: Request) {
     if (existingStore) {
       console.log('Updating existing store:', existingStore.id)
       // Update existing store with new access token
-      await prisma.shopifyStore.update({
+      const updatedStore = await prisma.shopifyStore.update({
         where: { id: existingStore.id },
         data: {
           accessToken: accessToken,
@@ -187,11 +247,15 @@ export async function GET(request: Request) {
           updatedAt: new Date(),
         }
       })
-      console.log('Store updated successfully')
+      console.log('Store updated successfully:', { 
+        storeId: updatedStore.id, 
+        shopDomain: updatedStore.shopDomain,
+        userId: updatedStore.userId
+      })
     } else {
       console.log('Creating new store record...')
       // Create new store record
-      await prisma.shopifyStore.create({
+      const newStore = await prisma.shopifyStore.create({
         data: {
           userId: user.id,
           shopDomain: shop,
@@ -199,20 +263,37 @@ export async function GET(request: Request) {
           isActive: true,
         }
       })
-      console.log('New store created successfully')
+      console.log('New store created successfully:', { 
+        storeId: newStore.id, 
+        shopDomain: newStore.shopDomain,
+        userId: newStore.userId
+      })
     }
 
     console.log('Store operation completed successfully')
 
-    // Redirect back to the app
-    const redirectPath = experienceId 
-      ? (returnTo || `/experiences/${experienceId}`)
-      : (returnTo || '/')
+    // Determine redirect URL based on authentication status
+    let redirectUrl: string;
     
-    // Convert to absolute URL
-    const redirectUrl = new URL(redirectPath, getBaseUrl()).toString()
-    
-    console.log('Completing OAuth flow:', { redirectUrl })
+    if (tempUserId) {
+      // Redirect to account linking page for temporary users
+      const linkUrl = new URL('/link-account', getBaseUrl())
+      linkUrl.searchParams.set('store', shop)
+      linkUrl.searchParams.set('tempUserId', tempUserId)
+      if (returnTo) {
+        linkUrl.searchParams.set('returnTo', returnTo)
+      }
+      redirectUrl = linkUrl.toString()
+      console.log('Redirecting temporary user to account linking:', redirectUrl)
+    } else {
+      // Normal redirect for authenticated users
+      const redirectPath = experienceId 
+        ? (returnTo || `/experiences/${experienceId}`)
+        : (returnTo || '/')
+      
+      redirectUrl = new URL(redirectPath, getBaseUrl()).toString()
+      console.log('Redirecting authenticated user:', redirectUrl)
+    }
     
     // Always return HTML that checks if it's in a popup or should redirect normally
     const html = `

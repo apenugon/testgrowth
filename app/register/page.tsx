@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Header } from "@/components/layout/header"
-import { Trophy, Eye, EyeOff } from "lucide-react"
+import { Trophy, Eye, EyeOff, ShoppingBag, CheckCircle } from "lucide-react"
 
 export default function RegisterPage() {
   const [email, setEmail] = useState("")
@@ -20,6 +20,11 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const router = useRouter()
+  const searchParams = useSearchParams()
+  
+  // Check if this is from Shopify app installation
+  const isFromShopifyInstall = searchParams.get('shopify') === 'install'
+  const shopDomain = searchParams.get('shop')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -42,10 +47,24 @@ export default function RegisterPage() {
 
       if (response.ok) {
         const data = await response.json()
-        // Redirect to the page they were trying to access or home
-        const urlParams = new URLSearchParams(window.location.search)
-        const redirect = urlParams.get('redirect') || '/'
-        window.location.href = redirect
+        
+        // If from Shopify install, redirect to connections page
+        if (isFromShopifyInstall) {
+          if (shopDomain) {
+            // Auto-connect to specific shop
+            const connectUrl = new URL('/connect-shopify', window.location.origin)
+            connectUrl.searchParams.set('shop', shopDomain)
+            connectUrl.searchParams.set('auto', 'true')
+            window.location.href = connectUrl.toString()
+          } else {
+            // Manual connection
+            window.location.href = '/shopify-connections'
+          }
+        } else {
+          // Redirect to the page they were trying to access or home
+          const redirect = searchParams.get('redirect') || '/'
+          window.location.href = redirect
+        }
       } else {
         const data = await response.json()
         setError(data.error || "Registration failed")
@@ -69,12 +88,48 @@ export default function RegisterPage() {
               <Trophy className="w-8 h-8 text-white" />
             </div>
             <h2 className="text-3xl font-bold text-gray-900">
-              Join Growth Arena
+              {isFromShopifyInstall ? "Complete Your Setup" : "Join Growth Arena"}
             </h2>
             <p className="mt-2 text-sm text-gray-600">
-              Create your account to participate in sales contests
+              {isFromShopifyInstall 
+                ? "Create your Growth Arena account to connect your Shopify store"
+                : "Create your account to participate in sales contests"
+              }
             </p>
           </div>
+
+          {/* Shopify Installation Flow Info */}
+          {isFromShopifyInstall && (
+            <Card className="bg-blue-50 border-blue-200">
+              <CardContent className="p-4">
+                <div className="flex items-start space-x-3">
+                  <ShoppingBag className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm">
+                    <h4 className="font-medium text-blue-900 mb-1">Shopify App Installed!</h4>
+                    <p className="text-blue-700 mb-2">
+                      Great! You've successfully installed the Growth Arena app. 
+                    </p>
+                    <div className="space-y-1">
+                      <div className="flex items-center text-blue-700">
+                        <CheckCircle className="w-3 h-3 mr-2" />
+                        <span className="text-xs">Step 1: Install Shopify app ✓</span>
+                      </div>
+                      <div className="flex items-center text-blue-700">
+                        <div className="w-3 h-3 mr-2 border border-blue-600 rounded-full flex items-center justify-center">
+                          <div className="w-1 h-1 bg-blue-600 rounded-full"></div>
+                        </div>
+                        <span className="text-xs">Step 2: Create Growth Arena account</span>
+                      </div>
+                      <div className="flex items-center text-blue-600">
+                        <div className="w-3 h-3 mr-2 border border-blue-400 rounded-full"></div>
+                        <span className="text-xs">Step 3: Connect your store</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Registration Form */}
           <Card>
@@ -169,7 +224,9 @@ export default function RegisterPage() {
                   className="w-full"
                   disabled={loading}
                 >
-                  {loading ? "Creating account..." : "Create account"}
+                  {loading ? "Creating account..." : (
+                    isFromShopifyInstall ? "Create account & Connect Store" : "Create account"
+                  )}
                 </Button>
               </form>
 
@@ -177,7 +234,10 @@ export default function RegisterPage() {
                 <div className="text-center">
                   <span className="text-sm text-gray-600">
                     Already have an account?{" "}
-                    <Link href="/login" className="font-medium text-emerald-600 hover:text-emerald-500">
+                    <Link 
+                      href={isFromShopifyInstall ? "/login?shopify=install" : "/login"} 
+                      className="font-medium text-emerald-600 hover:text-emerald-500"
+                    >
                       Sign in
                     </Link>
                   </span>

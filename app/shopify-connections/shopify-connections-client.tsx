@@ -2,20 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Plus, ShoppingBag, ExternalLink, Trash2, AlertTriangle, Download } from "lucide-react"
-import { formatDate } from "@/lib/utils"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import {
   Dialog,
   DialogContent,
@@ -23,6 +11,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog"
+import { ShoppingBag, Plus, Trash2, ExternalLink, AlertTriangle, Download } from "lucide-react"
 
 type ShopifyStore = {
   id: string
@@ -30,19 +19,23 @@ type ShopifyStore = {
   isActive: boolean
   createdAt: string
   lastSyncAt?: string
-  activeContests?: Array<{
-    id: string
-    name: string
-    endAt: string
-  }>
 }
 
 interface ShopifyConnectionsClientProps {
   userId: string
-  experienceId: string
 }
 
-export function ShopifyConnectionsClient({ userId, experienceId }: ShopifyConnectionsClientProps) {
+function formatDate(date: Date): string {
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(date)
+}
+
+export function ShopifyConnectionsClient({ userId }: ShopifyConnectionsClientProps) {
   const [stores, setStores] = useState<ShopifyStore[]>([])
   const [loading, setLoading] = useState(true)
   const [disconnecting, setDisconnecting] = useState<string | null>(null)
@@ -85,7 +78,7 @@ export function ShopifyConnectionsClient({ userId, experienceId }: ShopifyConnec
 
   const handleConnectExistingStore = () => {
     // Open connection page in popup
-    const connectUrl = `/experiences/${experienceId}/connect-shopify?returnTo=/experiences/${experienceId}/shopify-connections&popup=true`
+    const connectUrl = `/connect-shopify?returnTo=/shopify-connections&popup=true`
 
     const popup = window.open(
       connectUrl,
@@ -136,37 +129,20 @@ export function ShopifyConnectionsClient({ userId, experienceId }: ShopifyConnec
     setStoreToDisconnect(store)
   }
 
-  const confirmDisconnect = async () => {
+  const handleDisconnectConfirm = async () => {
     if (!storeToDisconnect) return
 
     setDisconnecting(storeToDisconnect.id)
     setError(null)
 
     try {
-      const response = await fetch('/api/stores/disconnect', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId,
-          storeId: storeToDisconnect.id
-        }),
+      const response = await fetch(`/api/stores/disconnect/${storeToDisconnect.id}`, {
+        method: 'DELETE',
       })
 
       if (response.ok) {
-        const data = await response.json()
-        
-        // Remove the store from the list
-        setStores(stores.filter(s => s.id !== storeToDisconnect.id))
-        
-        // Show success message with details about contest removals
-        if (data.removedFromContests && data.removedFromContests.length > 0) {
-          const contestNames = data.removedFromContests.map((c: any) => c.name).join(', ')
-          alert(`Store disconnected successfully! You have been removed from ${data.removedFromContests.length} contest(s): ${contestNames}`)
-        } else {
-          alert('Store disconnected successfully!')
-        }
+        setStores(stores.filter(store => store.id !== storeToDisconnect.id))
+        setStoreToDisconnect(null)
       } else {
         const errorData = await response.json()
         setError(errorData.error || 'Failed to disconnect store')
@@ -175,56 +151,47 @@ export function ShopifyConnectionsClient({ userId, experienceId }: ShopifyConnec
       setError('Failed to disconnect store')
     } finally {
       setDisconnecting(null)
-      setStoreToDisconnect(null)
     }
   }
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mr-3"></div>
-        <span className="text-gray-600">Loading connections...</span>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      {/* Add Connection Button */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Add New Connection
-              </h3>
-              <p className="text-gray-600">
-                Connect additional Shopify stores to participate in contests
-              </p>
-            </div>
-            <Button onClick={handleAddConnection}>
-              <Plus className="w-4 h-4 mr-2" />
-              {stores.length === 0 ? "Connect Your First Store" : "Connect Store"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Error Display */}
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-800">{error}</p>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-start">
+            <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" />
+            <div className="text-sm text-red-800">{error}</div>
+          </div>
         </div>
       )}
+
+      {/* Add Connection Button */}
+      <div className="text-center">
+        <Button 
+          onClick={handleAddConnection}
+          className="inline-flex items-center px-6 py-3"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          {stores.length === 0 ? "Connect Your First Store" : "Connect New Store"}
+        </Button>
+      </div>
 
       {/* Connected Stores */}
       {stores.length === 0 ? (
         <Card>
-          <CardContent className="p-12 text-center">
-            <ShoppingBag className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Connected Stores</h3>
-            <p className="text-gray-600 mb-6">
-              Connect your first Shopify store to start participating in sales contests
+          <CardContent className="text-center py-12">
+            <ShoppingBag className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No stores connected</h3>
+            <p className="text-gray-500 mb-4">
+              Connect your Shopify store to participate in sales contests
             </p>
             <Button onClick={handleAddConnection}>
               <Plus className="w-4 h-4 mr-2" />
@@ -234,7 +201,7 @@ export function ShopifyConnectionsClient({ userId, experienceId }: ShopifyConnec
         </Card>
       ) : (
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900">
+          <h3 className="text-lg font-medium text-gray-900">
             Connected Stores ({stores.length})
           </h3>
           
@@ -261,30 +228,6 @@ export function ShopifyConnectionsClient({ userId, experienceId }: ShopifyConnec
                         <p>Last sync: {formatDate(new Date(store.lastSyncAt))}</p>
                       )}
                     </div>
-
-                    {/* Show warning if store is used in active contests */}
-                    {store.activeContests && store.activeContests.length > 0 && (
-                      <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                        <div className="flex items-start space-x-2">
-                          <AlertTriangle className="w-4 h-4 text-orange-600 mt-0.5" />
-                          <div>
-                            <p className="text-sm font-medium text-orange-800">
-                              Active in {store.activeContests.length} contest{store.activeContests.length !== 1 ? 's' : ''}
-                            </p>
-                            <p className="text-xs text-orange-700 mt-1">
-                              Disconnecting will remove you from these contests:
-                            </p>
-                            <ul className="text-xs text-orange-700 mt-1 ml-4">
-                              {store.activeContests.map(contest => (
-                                <li key={contest.id}>
-                                  • {contest.name} (ends {formatDate(new Date(contest.endAt))})
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </div>
 
                   <div className="flex items-center space-x-2 ml-6">
@@ -359,46 +302,33 @@ export function ShopifyConnectionsClient({ userId, experienceId }: ShopifyConnec
       </Dialog>
 
       {/* Disconnect Confirmation Dialog */}
-      <AlertDialog open={!!storeToDisconnect} onOpenChange={() => setStoreToDisconnect(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Disconnect Shopify Store</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to disconnect "{storeToDisconnect?.shopDomain}"?
-              
-              {storeToDisconnect?.activeContests && storeToDisconnect.activeContests.length > 0 && (
-                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <div className="flex items-start space-x-2">
-                    <AlertTriangle className="w-4 h-4 text-red-600 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-red-800">
-                        Warning: You will be removed from {storeToDisconnect.activeContests.length} active contest{storeToDisconnect.activeContests.length !== 1 ? 's' : ''}
-                      </p>
-                      <ul className="text-xs text-red-700 mt-1">
-                        {storeToDisconnect.activeContests.map(contest => (
-                          <li key={contest.id}>• {contest.name}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDisconnect}
-              className="bg-red-600 hover:bg-red-700"
+      <Dialog open={!!storeToDisconnect} onOpenChange={() => setStoreToDisconnect(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Disconnect Store</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to disconnect {storeToDisconnect?.shopDomain}? 
+              This will remove access to order data and you won't be able to participate 
+              in contests with this store.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end space-x-2 mt-6">
+            <Button 
+              variant="outline" 
+              onClick={() => setStoreToDisconnect(null)}
             >
-              {storeToDisconnect?.activeContests && storeToDisconnect.activeContests.length > 0 
-                ? "Remove from Contests & Disconnect"
-                : "Disconnect Store"
-              }
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={handleDisconnectConfirm}
+              disabled={!!disconnecting}
+            >
+              {disconnecting ? 'Disconnecting...' : 'Disconnect'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 } 
