@@ -308,7 +308,7 @@ export function ContestPageHeader({
   };
 
   const handleInstallApp = () => {
-    // Redirect to Shopify App Store
+    // Redirect directly to Shopify App Store
     window.location.href = 'https://apps.shopify.com/growth-arena';
   };
 
@@ -537,7 +537,7 @@ export function ContestPageHeader({
           <div className="flex flex-col space-y-3 pt-4">
             <Button 
               onClick={handleInstallApp}
-              className="w-full"
+              className="w-full cursor-pointer"
               size="lg"
             >
               <ExternalLink className="w-4 h-4 mr-2" />
@@ -546,7 +546,7 @@ export function ContestPageHeader({
             <Button 
               variant="outline" 
               onClick={() => setShowInstallModal(false)}
-              className="w-full"
+              className="w-full cursor-pointer"
             >
               Cancel
             </Button>

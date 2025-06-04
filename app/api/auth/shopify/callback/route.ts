@@ -42,7 +42,7 @@ export async function GET(request: Request) {
       )
     }
 
-    const { userId, experienceId, returnTo, isWhopUser } = stateData
+    const { userId, experienceId, returnTo, isWhopUser, isTemporaryInstall } = stateData
 
     // Required environment variables
     const apiKey = process.env.SHOPIFY_APP_API_KEY
@@ -53,7 +53,8 @@ export async function GET(request: Request) {
       hasApiSecret: !!apiSecret,
       shop,
       userId,
-      isWhopUser
+      isWhopUser,
+      isTemporaryInstall
     })
 
     if (!apiKey || !apiSecret) {
@@ -106,18 +107,24 @@ export async function GET(request: Request) {
     let currentUser = null
     let createTempUser = false
     
-    try {
-      const sessionResult = await getSessionFromCookies()
-      if (sessionResult) {
-        currentUser = sessionResult
-        console.log('Current authenticated user found:', currentUser.userId)
-      } else {
-        console.log('No current authenticated user, will create temporary user')
+    if (isTemporaryInstall) {
+      // For temporary install flow, always create a temp user
+      console.log('Temporary install flow detected, will create temporary user')
+      createTempUser = true
+    } else {
+      try {
+        const sessionResult = await getSessionFromCookies()
+        if (sessionResult) {
+          currentUser = sessionResult
+          console.log('Current authenticated user found:', currentUser.userId)
+        } else {
+          console.log('No current authenticated user, will create temporary user')
+          createTempUser = true
+        }
+      } catch (error) {
+        console.log('No session found, will create temporary user')
         createTempUser = true
       }
-    } catch (error) {
-      console.log('No session found, will create temporary user')
-      createTempUser = true
     }
 
     let user;
@@ -276,15 +283,27 @@ export async function GET(request: Request) {
     let redirectUrl: string;
     
     if (tempUserId) {
-      // Redirect to account linking page for temporary users
-      const linkUrl = new URL('/link-account', getBaseUrl())
-      linkUrl.searchParams.set('store', shop)
-      linkUrl.searchParams.set('tempUserId', tempUserId)
-      if (returnTo) {
-        linkUrl.searchParams.set('returnTo', returnTo)
+      if (isTemporaryInstall) {
+        // For temporary install flow, redirect to signin with store info
+        const authUrl = new URL('/signin', getBaseUrl())
+        authUrl.searchParams.set('store', shop)
+        authUrl.searchParams.set('tempUserId', tempUserId)
+        if (returnTo) {
+          authUrl.searchParams.set('returnTo', returnTo)
+        }
+        redirectUrl = authUrl.toString()
+        console.log('Redirecting temporary install user to signin page:', redirectUrl)
+      } else {
+        // Redirect to account linking page for other temporary users
+        const linkUrl = new URL('/link-account', getBaseUrl())
+        linkUrl.searchParams.set('store', shop)
+        linkUrl.searchParams.set('tempUserId', tempUserId)
+        if (returnTo) {
+          linkUrl.searchParams.set('returnTo', returnTo)
+        }
+        redirectUrl = linkUrl.toString()
+        console.log('Redirecting temporary user to account linking:', redirectUrl)
       }
-      redirectUrl = linkUrl.toString()
-      console.log('Redirecting temporary user to account linking:', redirectUrl)
     } else {
       // Normal redirect for authenticated users
       const redirectPath = experienceId 

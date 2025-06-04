@@ -120,6 +120,7 @@ export default async function HomePage({ searchParams }: PageProps) {
   // Get user session from cookies (for external users)
   const session = await getSessionFromCookies()
   const user = session?.user
+  const userId = session?.userId
   
   // If this is a Shopify app installation callback
   if (isShopifyInstallCallback) {
@@ -153,26 +154,28 @@ export default async function HomePage({ searchParams }: PageProps) {
     
     console.log('Extracted shop domain:', shopDomain)
     
-    if (user && shopDomain) {
-      // User is logged in and we have shop domain, redirect to auto-connect flow
-      const connectUrl = new URL('/connect-shopify', process.env.APP_URL || 'http://localhost:3000')
-      connectUrl.searchParams.set('shop', shopDomain.replace('.myshopify.com', ''))
-      connectUrl.searchParams.set('auto', 'true')
-      redirect(connectUrl.toString())
-    } else if (user && !shopDomain) {
-      // User is logged in but no shop domain, redirect to manual connection
-      redirect('/shopify-connections')
-    } else if (!user && shopDomain) {
-      // User is not logged in, redirect to register with shop info
-      const registerUrl = new URL('/register', process.env.APP_URL || 'http://localhost:3000')
-      registerUrl.searchParams.set('shopify', 'install')
-      registerUrl.searchParams.set('shop', shopDomain.replace('.myshopify.com', ''))
-      redirect(registerUrl.toString())
+    if (!shopDomain) {
+      console.error('No shop domain found in installation callback')
+      return redirect('/?error=missing_shop_domain')
+    }
+    
+    // Clean shop domain (remove .myshopify.com for OAuth URL)
+    const cleanShopDomain = shopDomain.replace('.myshopify.com', '')
+    
+    if (userId) {
+      // User is logged in, redirect to OAuth with their user ID
+      const oauthUrl = new URL('/api/auth/shopify', process.env.APP_URL || 'http://localhost:3000')
+      oauthUrl.searchParams.set('shop', cleanShopDomain)
+      oauthUrl.searchParams.set('userId', userId)
+      oauthUrl.searchParams.set('returnTo', '/')
+      redirect(oauthUrl.toString())
     } else {
-      // User is not logged in and no shop domain, redirect to register
-      const registerUrl = new URL('/register', process.env.APP_URL || 'http://localhost:3000')
-      registerUrl.searchParams.set('shopify', 'install')
-      redirect(registerUrl.toString())
+      // User is not logged in, redirect to OAuth with temp-install flag
+      const oauthUrl = new URL('/api/auth/shopify', process.env.APP_URL || 'http://localhost:3000')
+      oauthUrl.searchParams.set('shop', cleanShopDomain)
+      oauthUrl.searchParams.set('userId', 'temp-install')
+      oauthUrl.searchParams.set('returnTo', '/')
+      redirect(oauthUrl.toString())
     }
   }
   

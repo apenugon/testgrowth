@@ -18,40 +18,47 @@ export async function GET(request: Request) {
       )
     }
 
-    // Determine if this is a Whop user or external user
     let isWhopUser = false
-    try {
-      // Check if the user exists as a Whop user
-      const whopUser = await prisma.user.findUnique({
-        where: { whopUserId: userId },
-        select: { id: true }
-      })
-      
-      if (whopUser) {
-        isWhopUser = true
-      } else {
-        // Check if it's an internal user ID
-        const externalUser = await prisma.user.findUnique({
-          where: { id: userId },
-          select: { whopUserId: true }
+    let isTemporaryInstall = false
+    
+    // Check if this is a temporary install flow (unauthenticated user)
+    if (userId === 'temp-install') {
+      isTemporaryInstall = true
+    } else {
+      // Determine if this is a Whop user or external user
+      try {
+        // Check if the user exists as a Whop user
+        const whopUser = await prisma.user.findUnique({
+          where: { whopUserId: userId },
+          select: { id: true }
         })
         
-        if (!externalUser) {
-          return NextResponse.json(
-            { error: "User not found" },
-            { status: 404 }
-          )
+        if (whopUser) {
+          isWhopUser = true
+        } else {
+          // Check if it's an internal user ID
+          const externalUser = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { whopUserId: true }
+          })
+          
+          if (!externalUser) {
+            return NextResponse.json(
+              { error: "User not found" },
+              { status: 404 }
+            )
+          }
+          
+          // If the user has a whopUserId, they're a Whop user
+          isWhopUser = !!externalUser.whopUserId
         }
-        
-        // If the user has a whopUserId, they're a Whop user
-        isWhopUser = !!externalUser.whopUserId
+      } catch (error) {
+        console.error('Error checking user type:', error)
+        return NextResponse.json(
+          { error: "Failed to verify user" },
+          { status: 500 }
+        )
       }
-    } catch (error) {
-      console.error('Error checking user type:', error)
-      return NextResponse.json(
-        { error: "Failed to verify user" },
-        { status: 500 }
-      )
     }
 
     // Validate shop domain format
@@ -82,7 +89,8 @@ export async function GET(request: Request) {
       returnTo,
       timestamp: Date.now(),
       popup: isPopup,
-      isWhopUser
+      isWhopUser,
+      isTemporaryInstall
     }))
 
     // Build Shopify OAuth URL

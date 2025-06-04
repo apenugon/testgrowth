@@ -24,6 +24,12 @@ function LoginForm() {
   // Check if this is from Shopify app installation
   const isFromShopifyInstall = searchParams.get('shopify') === 'install'
   const shopDomain = searchParams.get('shop')
+  
+  // New OAuth flow parameters
+  const storeInfo = searchParams.get('store')
+  const tempUserId = searchParams.get('tempUserId')
+  const returnTo = searchParams.get('returnTo')
+  const isFromOAuth = !!(storeInfo && tempUserId)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -42,8 +48,26 @@ function LoginForm() {
       if (response.ok) {
         const data = await response.json()
         
-        // If from Shopify install, redirect to connections page
-        if (isFromShopifyInstall) {
+        // If from OAuth flow, link the temporary store connection
+        if (isFromOAuth && tempUserId) {
+          try {
+            await fetch('/api/auth/link-store', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ tempUserId }),
+            })
+          } catch (linkError) {
+            console.error('Failed to link store:', linkError)
+            // Continue even if linking fails
+          }
+          
+          // Redirect to return URL or contest page
+          const redirectUrl = returnTo || '/'
+          window.location.href = redirectUrl
+        } else if (isFromShopifyInstall) {
+          // Legacy Shopify install flow
           if (shopDomain) {
             // Auto-connect to specific shop
             const connectUrl = new URL('/connect-shopify', window.location.origin)
@@ -55,7 +79,7 @@ function LoginForm() {
             window.location.href = '/shopify-connections'
           }
         } else {
-          // Redirect to the page they were trying to access or home
+          // Normal login flow
           const redirect = searchParams.get('redirect') || '/'
           window.location.href = redirect
         }
@@ -78,18 +102,41 @@ function LoginForm() {
           <Trophy className="w-8 h-8 text-white" />
         </div>
         <h2 className="text-3xl font-bold text-gray-900">
-          {isFromShopifyInstall ? "Welcome back!" : "Welcome back"}
+          {isFromOAuth ? "Complete Your Setup" : 
+           isFromShopifyInstall ? "Welcome back!" : "Welcome back"}
         </h2>
         <p className="mt-2 text-sm text-gray-600">
-          {isFromShopifyInstall 
-            ? "Sign in to complete your Shopify store connection"
-            : "Sign in to your Growth Arena account"
+          {isFromOAuth 
+            ? "Sign in to your account to link your Shopify store"
+            : isFromShopifyInstall 
+              ? "Sign in to complete your Shopify store connection"
+              : "Sign in to your Growth Arena account"
           }
         </p>
       </div>
 
+      {/* Store Connection Info for OAuth Flow */}
+      {isFromOAuth && storeInfo && (
+        <Card className="bg-green-50 border-green-200">
+          <CardContent className="p-4">
+            <div className="flex items-start space-x-3">
+              <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+              <div className="text-sm">
+                <h4 className="font-medium text-green-900 mb-1">Shopify Store Connected!</h4>
+                <p className="text-green-700 mb-2">
+                  Successfully connected <strong>{storeInfo}</strong>
+                </p>
+                <p className="text-green-700 text-xs">
+                  Sign in to your account to complete the setup and start competing.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Shopify Installation Flow Info */}
-      {isFromShopifyInstall && (
+      {isFromShopifyInstall && !isFromOAuth && (
         <Card className="bg-blue-50 border-blue-200">
           <CardContent className="p-4">
             <div className="flex items-start space-x-3">
@@ -182,6 +229,7 @@ function LoginForm() {
               disabled={loading}
             >
               {loading ? "Signing in..." : (
+                isFromOAuth ? "Sign in & Link Store" :
                 isFromShopifyInstall ? "Sign in & Connect Store" : "Sign in"
               )}
             </Button>
@@ -192,7 +240,13 @@ function LoginForm() {
               <span className="text-sm text-gray-600">
                 Don't have an account?{" "}
                 <Link 
-                  href={isFromShopifyInstall ? "/register?shopify=install" : "/register"} 
+                  href={
+                    isFromOAuth ? 
+                      `/register?store=${encodeURIComponent(storeInfo || '')}&tempUserId=${encodeURIComponent(tempUserId || '')}&returnTo=${encodeURIComponent(returnTo || '')}&mode=register` :
+                    isFromShopifyInstall ? 
+                      "/register?shopify=install" : 
+                      "/register"
+                  } 
                   className="font-medium text-emerald-600 hover:text-emerald-500"
                 >
                   Sign up

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, Suspense } from "react"
+import { useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -10,9 +10,11 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
-import { Trophy, Eye, EyeOff, ShoppingBag, CheckCircle } from "lucide-react"
+import { Trophy, Eye, EyeOff, CheckCircle } from "lucide-react"
 
-function RegisterForm() {
+export const dynamic = 'force-dynamic'
+
+function SignInForm() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [name, setName] = useState("")
@@ -20,14 +22,11 @@ function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [showOptionalFields, setShowOptionalFields] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
   
-  // Check if this is from Shopify app installation
-  const isFromShopifyInstall = searchParams.get('shopify') === 'install'
-  const shopDomain = searchParams.get('shop')
-  
-  // New OAuth flow parameters
+  // OAuth flow parameters
   const storeInfo = searchParams.get('store')
   const tempUserId = searchParams.get('tempUserId')
   const returnTo = searchParams.get('returnTo')
@@ -39,7 +38,7 @@ function RegisterForm() {
     setError("")
 
     try {
-      const response = await fetch("/api/auth/register", {
+      const response = await fetch("/api/auth/signin", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -69,30 +68,14 @@ function RegisterForm() {
             console.error('Failed to link store:', linkError)
             // Continue even if linking fails
           }
-          
-          // Redirect to return URL or contest page
-          const redirectUrl = returnTo || '/'
-          window.location.href = redirectUrl
-        } else if (isFromShopifyInstall) {
-          // Legacy Shopify install flow
-          if (shopDomain) {
-            // Auto-connect to specific shop
-            const connectUrl = new URL('/connect-shopify', window.location.origin)
-            connectUrl.searchParams.set('shop', shopDomain)
-            connectUrl.searchParams.set('auto', 'true')
-            window.location.href = connectUrl.toString()
-          } else {
-            // Manual connection
-            window.location.href = '/shopify-connections'
-          }
-        } else {
-          // Normal registration flow
-          const redirect = searchParams.get('redirect') || '/'
-          window.location.href = redirect
         }
+        
+        // Redirect to return URL or home
+        const redirectUrl = returnTo || '/'
+        window.location.href = redirectUrl
       } else {
         const data = await response.json()
-        setError(data.error || "Registration failed")
+        setError(data.error || "Authentication failed")
       }
     } catch (err) {
       setError("Network error. Please try again.")
@@ -109,15 +92,12 @@ function RegisterForm() {
           <Trophy className="w-8 h-8 text-white" />
         </div>
         <h2 className="text-3xl font-bold text-gray-900">
-          {isFromOAuth ? "Complete Your Setup" :
-           isFromShopifyInstall ? "Complete Your Setup" : "Join Growth Arena"}
+          {isFromOAuth ? "Complete Your Setup" : "Welcome to Growth Arena"}
         </h2>
         <p className="mt-2 text-sm text-gray-600">
-          {isFromOAuth
-            ? "Create your account to link your Shopify store and start competing"
-            : isFromShopifyInstall 
-              ? "Create your Growth Arena account to connect your Shopify store"
-              : "Create your account to participate in sales contests"
+          {isFromOAuth 
+            ? "Enter your details to link your Shopify store and start competing"
+            : "Sign in to your account or create a new one"
           }
         </p>
       </div>
@@ -134,7 +114,7 @@ function RegisterForm() {
                   Successfully connected <strong>{storeInfo}</strong>
                 </p>
                 <p className="text-green-700 text-xs">
-                  Create your account to complete the setup and start competing.
+                  Enter your details below to complete the setup and start competing.
                 </p>
               </div>
             </div>
@@ -142,43 +122,13 @@ function RegisterForm() {
         </Card>
       )}
 
-      {/* Shopify Installation Flow Info */}
-      {isFromShopifyInstall && !isFromOAuth && (
-        <Card className="bg-blue-50 border-blue-200">
-          <CardContent className="p-4">
-            <div className="flex items-start space-x-3">
-              <ShoppingBag className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-              <div className="text-sm">
-                <h4 className="font-medium text-blue-900 mb-1">Shopify App Installed!</h4>
-                <p className="text-blue-700 mb-2">
-                  Great! You've successfully installed the Growth Arena app. 
-                </p>
-                <div className="space-y-1">
-                  <div className="flex items-center text-blue-700">
-                    <CheckCircle className="w-3 h-3 mr-2" />
-                    <span className="text-xs">Step 1: Install Shopify app ✓</span>
-                  </div>
-                  <div className="flex items-center text-blue-700">
-                    <div className="w-3 h-3 mr-2 border border-blue-600 rounded-full flex items-center justify-center">
-                      <div className="w-1 h-1 bg-blue-600 rounded-full"></div>
-                    </div>
-                    <span className="text-xs">Step 2: Create Growth Arena account</span>
-                  </div>
-                  <div className="flex items-center text-blue-600">
-                    <div className="w-3 h-3 mr-2 border border-blue-400 rounded-full"></div>
-                    <span className="text-xs">Step 3: Connect your store</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Registration Form */}
+      {/* Sign In Form */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-center">Sign Up</CardTitle>
+          <CardTitle className="text-center">Sign In</CardTitle>
+          <p className="text-sm text-gray-600 text-center">
+            Enter your email and password. We'll create an account if you're new!
+          </p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -210,11 +160,11 @@ function RegisterForm() {
                   id="password"
                   name="password"
                   type={showPassword ? "text" : "password"}
-                  autoComplete="new-password"
+                  autoComplete="current-password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Create a password (min 8 characters)"
+                  placeholder="Enter your password"
                   minLength={8}
                 />
                 <button
@@ -229,78 +179,83 @@ function RegisterForm() {
                   )}
                 </button>
               </div>
-            </div>
-
-            <div>
-              <Label htmlFor="name">Full name</Label>
-              <Input
-                id="name"
-                name="name"
-                type="text"
-                autoComplete="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="mt-1"
-                placeholder="Enter your full name (optional)"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                name="username"
-                type="text"
-                autoComplete="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="mt-1"
-                placeholder="Choose a username (optional)"
-                minLength={3}
-              />
               <p className="text-xs text-gray-500 mt-1">
-                If not provided, we'll use the part before @ in your email
+                Minimum 8 characters
               </p>
             </div>
+
+            {/* Optional Fields Toggle */}
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => setShowOptionalFields(!showOptionalFields)}
+                className="text-sm text-emerald-600 hover:text-emerald-500 underline"
+              >
+                {showOptionalFields ? 'Hide' : 'Add'} optional details
+              </button>
+            </div>
+
+            {/* Optional Fields */}
+            {showOptionalFields && (
+              <>
+                <div>
+                  <Label htmlFor="name">Full name</Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    type="text"
+                    autoComplete="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="mt-1"
+                    placeholder="Enter your full name (optional)"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="username">Username</Label>
+                  <Input
+                    id="username"
+                    name="username"
+                    type="text"
+                    autoComplete="username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="mt-1"
+                    placeholder="Choose a username (optional)"
+                    minLength={3}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    If not provided, we'll use the part before @ in your email
+                  </p>
+                </div>
+              </>
+            )}
 
             <Button
               type="submit"
               className="w-full"
               disabled={loading}
             >
-              {loading ? "Creating account..." : (
-                isFromShopifyInstall ? "Create account & Connect Store" : "Create account"
+              {loading ? "Processing..." : (
+                isFromOAuth ? "Complete Setup" : "Continue"
               )}
             </Button>
           </form>
-
-          <div className="mt-6">
-            <div className="text-center">
-              <span className="text-sm text-gray-600">
-                Already have an account?{" "}
-                <Link 
-                  href={isFromShopifyInstall ? "/login?shopify=install" : "/login"} 
-                  className="font-medium text-emerald-600 hover:text-emerald-500"
-                >
-                  Sign in
-                </Link>
-              </span>
-            </div>
-          </div>
         </CardContent>
       </Card>
 
       {/* Additional Info */}
       <div className="text-center">
         <p className="text-xs text-gray-500">
-          By creating an account, you agree to participate in our sales contests and competition platform.
+          By continuing, you agree to participate in our sales contests and competition platform.
         </p>
       </div>
     </div>
   )
 }
 
-export default function RegisterPage() {
+export default function SignInPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 flex flex-col">
       <Header user={undefined} />
@@ -311,7 +266,7 @@ export default function RegisterPage() {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
           </div>
         }>
-          <RegisterForm />
+          <SignInForm />
         </Suspense>
       </div>
       
