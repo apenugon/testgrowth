@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Header } from "@/components/layout/header"
+import { Footer } from "@/components/layout/footer"
 import { Trophy, Eye, EyeOff, ShoppingBag, CheckCircle } from "lucide-react"
 
 function RegisterForm() {
@@ -254,10 +255,10 @@ function RegisterForm() {
 
 export default function RegisterPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 flex flex-col">
       <Header user={undefined} />
       
-      <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 flex-1">
         <Suspense fallback={
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
@@ -266,6 +267,8 @@ export default function RegisterPage() {
           <RegisterForm />
         </Suspense>
       </div>
+      
+      <Footer />
     </div>
   )
 } 

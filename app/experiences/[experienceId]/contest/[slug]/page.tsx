@@ -3,6 +3,7 @@ import { verifyUserToken } from "@whop/api"
 import { headers } from "next/headers"
 import { notFound, redirect } from "next/navigation"
 import { Header } from "@/components/layout/header"
+import { Footer } from "@/components/layout/footer"
 import { ContestPageHeader } from "@/components/contest/contest-page-header"
 import { ContestLeaderboard } from "@/components/contest/contest-leaderboard"
 import { ContestJoinButton } from "@/components/contest/contest-join-button"
@@ -181,7 +182,7 @@ export default async function ContestPage({ params }: ContestPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 flex flex-col">
       <Header 
         user={user || whopUser}
         experienceId={experienceId}
@@ -190,7 +191,7 @@ export default async function ContestPage({ params }: ContestPageProps) {
         backLabel="Back to Contests"
       />
       
-      <div className="py-8 px-4">
+      <div className="py-8 px-4 flex-1">
         <div className="max-w-6xl mx-auto">
           {/* Integrated Contest Card */}
           <div className="bg-white rounded-lg shadow-lg overflow-hidden">
@@ -225,6 +226,8 @@ export default async function ContestPage({ params }: ContestPageProps) {
           </div>
         </div>
       </div>
+      
+      <Footer />
     </div>
   )
 } 

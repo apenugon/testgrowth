@@ -14,8 +14,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Whop App",
-  description: "My Whop App",
+  title: "Growth Arena",
+  description: "Shopify sales contest platform - compete, track sales, and win prizes",
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({

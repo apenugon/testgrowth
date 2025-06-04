@@ -2,6 +2,7 @@ import { Suspense } from "react"
 import { redirect } from "next/navigation"
 import { ExternalContestList } from "@/components/contest/external-contest-list"
 import { Header } from "@/components/layout/header"
+import { Footer } from "@/components/layout/footer"
 import { prisma } from "@/lib/prisma"
 import { getSessionFromCookies } from "@/lib/auth"
 import { createHmac } from "crypto"
@@ -176,9 +177,9 @@ export default async function HomePage({ searchParams }: PageProps) {
   // If ?view=list is present, always show the list
   if (resolvedSearchParams.view === 'list') {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 flex flex-col">
         <Header user={user} />
-        <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 flex-1">
           <Suspense fallback={
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
@@ -187,6 +188,7 @@ export default async function HomePage({ searchParams }: PageProps) {
             <ExternalContestList />
           </Suspense>
         </div>
+        <Footer />
       </div>
     )
   }
@@ -200,9 +202,9 @@ export default async function HomePage({ searchParams }: PageProps) {
 
   // If no contests to redirect to, show the list
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header user={user} />
-      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 flex-1">
         <Suspense fallback={
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
@@ -211,6 +213,7 @@ export default async function HomePage({ searchParams }: PageProps) {
           <ExternalContestList />
         </Suspense>
       </div>
+      <Footer />
     </div>
   )
 }
