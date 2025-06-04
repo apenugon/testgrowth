@@ -9,6 +9,7 @@ import { ContestJoinButton } from "@/components/contest/contest-join-button"
 import { Card, CardContent } from "@/components/ui/card"
 import { whopApi } from "@/lib/whop-api"
 import { prisma } from "@/lib/prisma"
+import { getSessionFromCookies } from "@/lib/auth"
 
 interface ContestPageProps {
   params: Promise<{ slug: string }>
@@ -23,65 +24,85 @@ export default async function ContestPage({ params }: ContestPageProps) {
     notFound()
   }
 
-  // Check if user is authenticated (optional for public contests)
+  // Check authentication using unified system
   const headersList = await headers()
   const userToken = headersList.get('x-whop-user-token')
-  const { userId } = await verifyUserToken(headersList)
-
-  // Get user and experience data if authenticated
+  
+  // Variables for user data
   let user = null
   let experienceId = null
   let internalUserId = null
+  let userId = null // Whop user ID for iframe users
   
-  if (userId) {
+  // Try Whop authentication first (for iframe users)
+  if (userToken) {
     try {
-      const whopUser = await whopApi.getUser({ userId })
-      const publicUser = whopUser.publicUser
-      if (publicUser) {
-        user = {
-          name: publicUser.name || undefined,
-          username: publicUser.username
-        }
-      }
-
-      // Map Whop user ID to internal user ID
-      const dbUser = await prisma.user.findUnique({
-        where: { whopUserId: userId }
-      })
-      if (dbUser) {
-        internalUserId = dbUser.id
+      const { userId: whopUserId } = await verifyUserToken(headersList)
+      if (whopUserId) {
+        userId = whopUserId
         
-        // Update user record with latest Whop username if different
-        if (dbUser.username !== publicUser.username) {
-          await prisma.user.update({
-            where: { id: dbUser.id },
-            data: { 
+        const whopUser = await whopApi.getUser({ userId: whopUserId })
+        const publicUser = whopUser.publicUser
+        if (publicUser) {
+          user = {
+            name: publicUser.name || undefined,
+            username: publicUser.username
+          }
+        }
+
+        // Map Whop user ID to internal user ID
+        const dbUser = await prisma.user.findUnique({
+          where: { whopUserId }
+        })
+        if (dbUser) {
+          internalUserId = dbUser.id
+          
+          // Update user record with latest Whop username if different
+          if (dbUser.username !== publicUser.username) {
+            await prisma.user.update({
+              where: { id: dbUser.id },
+              data: { 
+                username: publicUser.username,
+                name: publicUser.name || undefined
+              }
+            })
+          }
+        } else if (publicUser) {
+          // Create user record if it doesn't exist
+          const newUser = await prisma.user.create({
+            data: {
+              whopUserId,
               username: publicUser.username,
-              name: publicUser.name || undefined
+              name: publicUser.name || undefined,
+              email: `${whopUserId}@whop.user`,
             }
           })
+          internalUserId = newUser.id
         }
-      } else if (publicUser) {
-        // Create user record if it doesn't exist
-        const newUser = await prisma.user.create({
-          data: {
-            whopUserId: userId,
-            username: publicUser.username,
-            name: publicUser.name || undefined,
-            email: `${userId}@whop.user`,
-          }
-        })
-        internalUserId = newUser.id
-      }
 
-      // Check if we can get experience ID from headers or context
-      // The Whop platform should provide this context
-      const experienceHeader = headersList.get('x-whop-experience-id')
-      if (experienceHeader) {
-        experienceId = experienceHeader
+        // Check if we can get experience ID from headers or context
+        const experienceHeader = headersList.get('x-whop-experience-id')
+        if (experienceHeader) {
+          experienceId = experienceHeader
+        }
       }
     } catch (error) {
-      console.error("Error fetching user data:", error)
+      console.error("Error fetching Whop user data:", error)
+    }
+  }
+  
+  // Try session cookie authentication (for external users)
+  if (!internalUserId) {
+    try {
+      const sessionResult = await getSessionFromCookies()
+      if (sessionResult) {
+        user = sessionResult.user
+        internalUserId = sessionResult.userId
+        // For external users, we use the internal user ID as their identifier
+        userId = sessionResult.userId
+      }
+    } catch (error) {
+      console.error("Error fetching session data:", error)
     }
   }
 
@@ -96,7 +117,7 @@ export default async function ContestPage({ params }: ContestPageProps) {
   // Transform contest data to match component types
   const participantsForLeaderboard = contest.participants.map(p => ({
     id: p.contestId,
-    userId: p.user.whopUserId,
+    userId: p.user.whopUserId || p.userId, // Use whopUserId if available, otherwise internal userId
     totalSales: p.totalSales,
     orderCount: p.orderCount,
     user: {
@@ -110,7 +131,7 @@ export default async function ContestPage({ params }: ContestPageProps) {
     try {
       for (const participant of contest.participants) {
         const user = participant.user;
-        if (user.username === `user-${user.whopUserId}`) {
+        if (user.whopUserId && user.username === `user-${user.whopUserId}`) {
           try {
             // Fetch real username from Whop
             const whopUser = await whopApi.getUser({ userId: user.whopUserId });

@@ -11,13 +11,16 @@ datasource db {
 }
 
 model User {
-  id           String @id @default(cuid())
-  whopUserId   String @unique @map("whop_user_id")
-  email        String @unique
-  name         String?
-  username     String?
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id             String @id @default(cuid())
+  whopUserId     String? @unique @map("whop_user_id") // Now optional for email users
+  email          String @unique
+  name           String?
+  username       String?
+  password       String? // Hashed password for email auth
+  authProvider   String @default("whop") @map("auth_provider") // "whop" or "email"
+  emailVerified  Boolean @default(false) @map("email_verified")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   // Relations
   shopifyStores       ShopifyStore[]
